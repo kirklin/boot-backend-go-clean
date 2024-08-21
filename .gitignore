@@ -1,7 +1,7 @@
 ######################
 # Project Specific
 ######################
-
+*.env
 
 # Binaries for programs and plugins
 *.exe
