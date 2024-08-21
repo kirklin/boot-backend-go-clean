@@ -25,11 +25,14 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	// Start your application here
-	// For example, you might start an HTTP server:
-	// go startHTTPServer(app)
+	// Start the application in a separate goroutine
+	go func() {
+		if err := app.Run(); err != nil {
+			log.Fatalf("Failed to run application: %v", err)
+		}
+	}()
 
-	log.Printf("Application is running. Press CTRL+C to stop.")
+	log.Printf("Application is running on %s. Press CTRL+C to stop.", app.Config.ServerAddress)
 
 	// Wait for interrupt signal
 	<-stop
@@ -41,8 +44,3 @@ func main() {
 
 	log.Println("Application stopped")
 }
-
-// You might have additional functions here, such as:
-// func startHTTPServer(app *bootstrap.Application) {
-//     // HTTP server setup and start logic
-// }

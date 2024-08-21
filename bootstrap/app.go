@@ -1,9 +1,14 @@
 package bootstrap
 
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/route"
+)
+
 // Application holds the core components of the application
 type Application struct {
 	Config *AppConfig
-	// You can add more fields here in the future as needed
+	Router *gin.Engine
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -13,8 +18,17 @@ func NewApplication() (*Application, error) {
 		return nil, err
 	}
 
+	if config.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	router := gin.New()
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
 	app := &Application{
 		Config: config,
+		Router: router,
 	}
 
 	return app, nil
@@ -22,8 +36,18 @@ func NewApplication() (*Application, error) {
 
 // Initialize performs any necessary setup for the application
 func (app *Application) Initialize() error {
-	// You can add initialization logic here if needed
+	// Set up routes
+	route.SetupRoutes(app.Router)
 	return nil
+}
+
+// Run starts the application
+func (app *Application) Run() error {
+	err := app.Router.SetTrustedProxies(nil)
+	if err != nil {
+		return err
+	}
+	return app.Router.Run(app.Config.ServerAddress)
 }
 
 // Shutdown performs any necessary cleanup before the application exits
