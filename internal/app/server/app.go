@@ -1,15 +1,20 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
+	"github.com/kirklin/boot-backend-go-clean/pkg/database"
+	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
+	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
 )
 
 // Application holds the core components of the application
 type Application struct {
 	Config *configs.AppConfig
 	Router *gin.Engine
+	DB     database.Database
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -37,8 +42,33 @@ func NewApplication() (*Application, error) {
 
 // Initialize performs any necessary setup for the application
 func (app *Application) Initialize() error {
+	// Initialize database
+	dbConfig := &database.Config{
+		Host:     app.Config.DatabaseHost,
+		Port:     app.Config.DatabasePort,
+		User:     app.Config.DatabaseUser,
+		Password: app.Config.DatabasePassword,
+		DBName:   app.Config.DatabaseName,
+		SSLMode:  app.Config.DatabaseSSLMode,
+	}
+
+	var err error
+	switch app.Config.DatabaseType {
+	case "postgres":
+		app.DB = postgres.NewPostgresDB()
+	case "mysql":
+		app.DB = mysql.NewMySQLDB()
+	default:
+		return fmt.Errorf("unsupported database type: %s", app.Config.DatabaseType)
+	}
+
+	err = app.DB.Connect(dbConfig)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+
 	// Set up routes
-	route.SetupRoutes(app.Router)
+	route.SetupRoutes(app.Router, app.DB)
 	return nil
 }
 
@@ -53,5 +83,7 @@ func (app *Application) Run() error {
 
 // Shutdown performs any necessary cleanup before the application exits
 func (app *Application) Shutdown() {
-	// You can add shutdown logic here if needed
+	if app.DB != nil {
+		_ = app.DB.Close()
+	}
 }

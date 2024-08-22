@@ -1,13 +1,14 @@
 package route
 
 import (
+	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRoutes configures the routes for the application
-func SetupRoutes(router *gin.Engine) {
+func SetupRoutes(router *gin.Engine, db database.Database) {
 	// Health check route
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

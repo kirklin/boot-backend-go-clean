@@ -9,14 +9,18 @@ import (
 
 // AppConfig holds all configuration for the application
 type AppConfig struct {
-	Environment          string `mapstructure:"APP_ENVIRONMENT"`
-	ServerAddress        string `mapstructure:"SERVER_ADDRESS"`
-	RequestTimeout       int    `mapstructure:"REQUEST_TIMEOUT_SECONDS"`
-	DatabaseHost         string `mapstructure:"DATABASE_HOST"`
-	DatabasePort         string `mapstructure:"DATABASE_PORT"`
-	DatabaseUser         string `mapstructure:"DATABASE_USER"`
-	DatabasePassword     string `mapstructure:"DATABASE_PASSWORD"`
-	DatabaseName         string `mapstructure:"DATABASE_NAME"`
+	Environment    string `mapstructure:"APP_ENVIRONMENT"`
+	ServerAddress  string `mapstructure:"SERVER_ADDRESS"`
+	RequestTimeout int    `mapstructure:"REQUEST_TIMEOUT_SECONDS"`
+	// Database
+	DatabaseType     string `mapstructure:"DATABASE_TYPE"`
+	DatabaseHost     string `mapstructure:"DATABASE_HOST"`
+	DatabasePort     int    `mapstructure:"DATABASE_PORT"`
+	DatabaseUser     string `mapstructure:"DATABASE_USER"`
+	DatabasePassword string `mapstructure:"DATABASE_PASSWORD"`
+	DatabaseName     string `mapstructure:"DATABASE_NAME"`
+	DatabaseSSLMode  string `mapstructure:"DATABASE_SSL_MODE"`
+	// JWT
 	AccessTokenLifetime  int    `mapstructure:"ACCESS_TOKEN_LIFETIME_HOURS"`
 	RefreshTokenLifetime int    `mapstructure:"REFRESH_TOKEN_LIFETIME_HOURS"`
 	AccessTokenSecret    string `mapstructure:"ACCESS_TOKEN_SECRET"`
