@@ -1,17 +1,16 @@
 package main
 
 import (
+	"github.com/kirklin/boot-backend-go-clean/internal/app/server"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/kirklin/boot-backend-go-clean/bootstrap"
 )
 
 func main() {
 	// Create a new application instance
-	app, err := bootstrap.NewApplication()
+	app, err := server.NewApplication()
 	if err != nil {
 		log.Fatalf("Failed to create application: %v", err)
 	}

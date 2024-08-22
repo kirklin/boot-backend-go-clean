@@ -1,19 +1,20 @@
-package bootstrap
+package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/kirklin/boot-backend-go-clean/route"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
+	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 )
 
 // Application holds the core components of the application
 type Application struct {
-	Config *AppConfig
+	Config *configs.AppConfig
 	Router *gin.Engine
 }
 
 // NewApplication creates and initializes a new Application instance
 func NewApplication() (*Application, error) {
-	config, err := LoadConfig()
+	config, err := configs.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
