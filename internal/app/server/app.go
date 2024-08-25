@@ -3,12 +3,12 @@ package server
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
-	"github.com/kirklin/boot-backend-go-clean/pkg/jwt"
 )
 
 // Application holds the core components of the application
@@ -76,7 +76,7 @@ func (app *Application) Initialize() error {
 	}
 
 	// Initialize JWT
-	jwt.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
+	auth.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
 
 	// Set up routes
 	route.SetupRoutes(app.Router, app.DB)

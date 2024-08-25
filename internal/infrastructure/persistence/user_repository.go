@@ -1,14 +1,13 @@
-package repository
+package persistence
 
 import (
 	"context"
 	"errors"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
-	"github.com/kirklin/boot-backend-go-clean/pkg/database"
-
 	"gorm.io/gorm"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
+	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
 type userRepository struct {

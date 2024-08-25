@@ -2,10 +2,10 @@ package usecase
 
 import (
 	"context"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 )
 
 type userUseCase struct {

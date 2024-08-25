@@ -2,6 +2,7 @@ package route
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )

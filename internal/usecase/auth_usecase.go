@@ -3,13 +3,13 @@ package usecase
 import (
 	"context"
 	"errors"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
+	"golang.org/x/crypto/bcrypt"
 	"time"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
-	"github.com/kirklin/boot-backend-go-clean/pkg/jwt"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 )
 
 type authUseCase struct {
@@ -69,7 +69,7 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 	}
 
 	// Generate tokens
-	tokenPair, err := jwt.GenerateTokenPair(user, 15*time.Minute, 7*24*time.Hour)
+	tokenPair, err := auth.GenerateTokenPair(user, 15*time.Minute, 7*24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 
 func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error) {
 	// Validate refresh token
-	refreshClaims, _, err := jwt.ValidateRefreshToken(req.RefreshToken)
+	refreshClaims, _, err := auth.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	}
 
 	// Generate new token pair
-	tokenPair, err := jwt.GenerateTokenPair(user, 15*time.Minute, 7*24*time.Hour)
+	tokenPair, err := auth.GenerateTokenPair(user, 15*time.Minute, 7*24*time.Hour)
 	if err != nil {
 		return nil, err
 	}

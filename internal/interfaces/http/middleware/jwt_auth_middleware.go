@@ -1,12 +1,12 @@
 package middleware
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
-	"github.com/kirklin/boot-backend-go-clean/pkg/jwt"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 )
 
 // JWTAuthMiddleware checks for a valid JWT token in the Authorization header
@@ -29,7 +29,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		tokenString := bearerToken[1]
 
 		// Validate the access token
-		claims, _, err := jwt.ValidateAccessToken(tokenString)
+		claims, _, err := auth.ValidateAccessToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, entity.NewErrorResponse("Invalid or expired token", err))
 			c.Abort()
