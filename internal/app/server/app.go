@@ -71,7 +71,7 @@ func (app *Application) Initialize() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	if err := database.AutoMigrate(app.DB.DB()); err != nil {
+	if err := database.AutoMigrate(app.DB); err != nil {
 		return fmt.Errorf("failed to auto migrate: %w", err)
 	}
 
@@ -79,7 +79,7 @@ func (app *Application) Initialize() error {
 	jwt.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
 
 	// Set up routes
-	route.SetupRoutes(app.Router, app.DB.DB())
+	route.SetupRoutes(app.Router, app.DB)
 	return nil
 }
 

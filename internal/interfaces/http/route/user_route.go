@@ -6,10 +6,10 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/usecase"
-	"gorm.io/gorm"
+	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
-func NewUserRouter(db *gorm.DB, group *gin.RouterGroup) {
+func NewUserRouter(db database.Database, group *gin.RouterGroup) {
 	ur := repository.NewUserRepository(db)
 	uc := controller.NewUserController(usecase.NewUserUseCase(ur))
 
