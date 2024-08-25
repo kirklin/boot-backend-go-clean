@@ -103,16 +103,17 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 }
 
 func (c *AuthController) Logout(ctx *gin.Context) {
-	userID, exists := ctx.Get("userID")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, entity.ErrorResponse{
+	var req entity.LogoutRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, entity.ErrorResponse{
 			Status:  "error",
-			Message: "User not authenticated",
+			Message: "Invalid input",
+			Error:   err.Error(),
 		})
 		return
 	}
 
-	err := c.authUseCase.Logout(ctx, userID.(uint))
+	err := c.authUseCase.Logout(ctx, req.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, entity.ErrorResponse{
 			Status:  "error",

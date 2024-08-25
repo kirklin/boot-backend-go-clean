@@ -13,12 +13,14 @@ import (
 )
 
 type authUseCase struct {
-	userRepo repository.UserRepository
+	userRepo  repository.UserRepository
+	blacklist *auth.TokenBlacklist
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository) usecase.AuthUseCase {
+func NewAuthUseCase(userRepo repository.UserRepository, blacklist *auth.TokenBlacklist) usecase.AuthUseCase {
 	return &authUseCase{
-		userRepo: userRepo,
+		userRepo:  userRepo,
+		blacklist: blacklist,
 	}
 }
 
@@ -83,6 +85,11 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 }
 
 func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error) {
+
+	if a.blacklist.IsTokenBlacklisted(req.RefreshToken) {
+		return nil, errors.New("refresh token is blacklisted")
+	}
+
 	// Validate refresh token
 	refreshClaims, _, err := auth.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
@@ -111,9 +118,8 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	}, nil
 }
 
-func (a *authUseCase) Logout(ctx context.Context, userID uint) error {
-	// In a real-world scenario, you might want to invalidate the refresh token
-	// This could involve storing the token in a blacklist or removing it from storage
-	// For simplicity, we'll just return nil here
+func (a *authUseCase) Logout(ctx context.Context, refreshToken string) error {
+	// 将刷新令牌添加到黑名单，设置过期时间为 7 天
+	a.blacklist.AddToken(refreshToken, 7*24*time.Hour)
 	return nil
 }

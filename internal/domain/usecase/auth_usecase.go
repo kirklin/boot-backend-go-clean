@@ -22,5 +22,5 @@ type AuthUseCase interface {
 
 	// Logout invalidates the user's current session
 	// It takes a user ID and returns an error if the operation fails
-	Logout(ctx context.Context, userID uint) error
+	Logout(ctx context.Context, refreshToken string) error
 }
