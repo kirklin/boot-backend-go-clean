@@ -2,6 +2,7 @@ package route
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
@@ -11,10 +12,10 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
-func NewAuthRouter(db database.Database, group *gin.RouterGroup) {
+func NewAuthRouter(db database.Database, group *gin.RouterGroup, config *configs.AppConfig) {
 	ur := persistence.NewUserRepository(db)
 	tokenBlacklist := auth.NewTokenBlacklist()
-	ac := controller.NewAuthController(usecase.NewAuthUseCase(ur, tokenBlacklist))
+	ac := controller.NewAuthController(usecase.NewAuthUseCase(ur, tokenBlacklist), config)
 
 	group.POST("/register", ac.Register)
 	group.POST("/login", ac.Login)

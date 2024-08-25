@@ -9,6 +9,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
+	"time"
 )
 
 // Application holds the core components of the application
@@ -76,10 +77,15 @@ func (app *Application) Initialize() error {
 	}
 
 	// Initialize JWT
-	auth.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
+	auth.InitJWT(app.Config.AccessTokenSecret,
+		app.Config.RefreshTokenSecret,
+		app.Config.JWTIssuer,
+		time.Duration(app.Config.AccessTokenLifetime)*time.Hour,
+		time.Duration(app.Config.RefreshTokenLifetime)*time.Hour,
+	)
 
 	// Set up routes
-	route.SetupRoutes(app.Router, app.DB)
+	route.SetupRoutes(app.Router, app.DB, app.Config)
 	return nil
 }
 

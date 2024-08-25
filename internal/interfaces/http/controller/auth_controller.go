@@ -6,15 +6,18 @@ import (
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
+	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 )
 
 type AuthController struct {
 	authUseCase usecase.AuthUseCase
+	config      *configs.AppConfig
 }
 
-func NewAuthController(authUseCase usecase.AuthUseCase) *AuthController {
+func NewAuthController(authUseCase usecase.AuthUseCase, config *configs.AppConfig) *AuthController {
 	return &AuthController{
 		authUseCase: authUseCase,
+		config:      config,
 	}
 }
 
@@ -113,7 +116,7 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 		return
 	}
 
-	err := c.authUseCase.Logout(ctx, req.RefreshToken)
+	err := c.authUseCase.Logout(req.RefreshToken, c.config)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, entity.ErrorResponse{
 			Status:  "error",

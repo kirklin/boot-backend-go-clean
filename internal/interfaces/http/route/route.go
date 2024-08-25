@@ -2,13 +2,14 @@ package route
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
 // SetupRoutes configures the routes for the application
-func SetupRoutes(router *gin.Engine, db database.Database) {
+func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppConfig) {
 	// Public routes
 	publicRouter := router.Group("")
 	publicRouter.GET("/health", func(c *gin.Context) {
@@ -19,8 +20,8 @@ func SetupRoutes(router *gin.Engine, db database.Database) {
 	apiRouter := router.Group("/api")
 
 	// Setup auth routes
-	NewAuthRouter(db, apiRouter)
+	NewAuthRouter(db, apiRouter, config)
 
 	// Setup user routes
-	NewUserRouter(db, apiRouter)
+	NewUserRouter(db, apiRouter, config)
 }

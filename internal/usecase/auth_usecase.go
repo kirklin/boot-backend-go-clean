@@ -10,6 +10,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 )
 
 type authUseCase struct {
@@ -71,7 +72,7 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 	}
 
 	// Generate tokens
-	tokenPair, err := auth.GenerateTokenPair(user, 15*time.Minute, 7*24*time.Hour)
+	tokenPair, err := auth.GenerateTokenPair(user)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	}
 
 	// Generate new token pair
-	tokenPair, err := auth.GenerateTokenPair(user, 15*time.Minute, 7*24*time.Hour)
+	tokenPair, err := auth.GenerateTokenPair(user)
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +119,8 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	}, nil
 }
 
-func (a *authUseCase) Logout(ctx context.Context, refreshToken string) error {
-	// 将刷新令牌添加到黑名单，设置过期时间为 7 天
-	a.blacklist.AddToken(refreshToken, 7*24*time.Hour)
+func (a *authUseCase) Logout(refreshToken string, config *configs.AppConfig) error {
+	// 将刷新令牌添加到黑名单
+	a.blacklist.AddToken(refreshToken, time.Duration(config.RefreshTokenLifetime)*time.Hour)
 	return nil
 }

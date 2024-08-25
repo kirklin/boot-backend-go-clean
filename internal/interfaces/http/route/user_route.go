@@ -2,6 +2,7 @@ package route
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
@@ -10,7 +11,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
-func NewUserRouter(db database.Database, group *gin.RouterGroup) {
+func NewUserRouter(db database.Database, group *gin.RouterGroup, config *configs.AppConfig) {
 	ur := persistence.NewUserRepository(db)
 	uc := controller.NewUserController(usecase.NewUserUseCase(ur))
 

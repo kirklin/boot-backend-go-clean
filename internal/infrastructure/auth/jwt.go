@@ -9,26 +9,30 @@ import (
 )
 
 var (
-	AccessSecret  []byte
-	RefreshSecret []byte
-	Issuer        string
+	AccessSecret      []byte
+	RefreshSecret     []byte
+	Issuer            string
+	AccessExpiration  time.Duration
+	RefreshExpiration time.Duration
 )
 
 // InitJWT initializes the JWT package with the necessary secrets and issuer
-func InitJWT(accessSecret, refreshSecret, issuer string) {
+func InitJWT(accessSecret, refreshSecret, issuer string, accessExpiration, refreshExpiration time.Duration) {
 	AccessSecret = []byte(accessSecret)
 	RefreshSecret = []byte(refreshSecret)
 	Issuer = issuer
+	AccessExpiration = accessExpiration
+	RefreshExpiration = refreshExpiration
 }
 
 // GenerateTokenPair generates an access token and a refresh token for a user
-func GenerateTokenPair(user *entity.User, accessExpiration, refreshExpiration time.Duration) (*entity.TokenPair, error) {
-	accessToken, err := GenerateAccessToken(user, accessExpiration)
+func GenerateTokenPair(user *entity.User) (*entity.TokenPair, error) {
+	accessToken, err := GenerateAccessToken(user, AccessExpiration)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := GenerateRefreshToken(user, refreshExpiration)
+	refreshToken, err := GenerateRefreshToken(user, RefreshExpiration)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +40,7 @@ func GenerateTokenPair(user *entity.User, accessExpiration, refreshExpiration ti
 	return &entity.TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresAt:    time.Now().Add(accessExpiration),
+		ExpiresAt:    time.Now().Add(AccessExpiration),
 	}, nil
 }
 
