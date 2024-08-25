@@ -8,6 +8,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
+	"github.com/kirklin/boot-backend-go-clean/pkg/jwt"
 )
 
 // Application holds the core components of the application
@@ -66,6 +67,9 @@ func (app *Application) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	// Initialize JWT
+	jwt.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
 
 	// Set up routes
 	route.SetupRoutes(app.Router, app.DB)

@@ -25,6 +25,7 @@ type AppConfig struct {
 	RefreshTokenLifetime int    `mapstructure:"REFRESH_TOKEN_LIFETIME_HOURS"`
 	AccessTokenSecret    string `mapstructure:"ACCESS_TOKEN_SECRET"`
 	RefreshTokenSecret   string `mapstructure:"REFRESH_TOKEN_SECRET"`
+	JWTIssuer            string `mapstructure:"JWT_ISSUER"`
 }
 
 // LoadConfig reads the configuration from .env file and environment variables
