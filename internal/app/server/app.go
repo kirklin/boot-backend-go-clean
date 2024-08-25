@@ -33,6 +33,9 @@ func NewApplication() (*Application, error) {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
+	// Add timeout middleware
+	//router.Use(middleware.TimeoutMiddleware(time.Duration(config.RequestTimeout) * time.Second))
+
 	app := &Application{
 		Config: config,
 		Router: router,
