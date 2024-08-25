@@ -71,6 +71,10 @@ func (app *Application) Initialize() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	if err := database.AutoMigrate(app.DB.DB()); err != nil {
+		return fmt.Errorf("failed to auto migrate: %w", err)
+	}
+
 	// Initialize JWT
 	jwt.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
 
