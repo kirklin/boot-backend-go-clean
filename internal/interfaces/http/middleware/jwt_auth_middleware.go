@@ -43,3 +43,21 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// GetUserIDFromContext retrieves the user ID from the Gin context
+func GetUserIDFromContext(c *gin.Context) (uint, bool) {
+	userID, exists := c.Get("x-user-id")
+	if !exists {
+		return 0, false
+	}
+	return userID.(uint), true
+}
+
+// GetUsernameFromContext retrieves the username from the Gin context
+func GetUsernameFromContext(c *gin.Context) (string, bool) {
+	username, exists := c.Get("x-username")
+	if !exists {
+		return "", false
+	}
+	return username.(string), true
+}

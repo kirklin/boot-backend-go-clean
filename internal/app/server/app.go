@@ -75,7 +75,7 @@ func (app *Application) Initialize() error {
 	jwt.InitJWT(app.Config.AccessTokenSecret, app.Config.RefreshTokenSecret, app.Config.JWTIssuer)
 
 	// Set up routes
-	route.SetupRoutes(app.Router, app.DB)
+	route.SetupRoutes(app.Router, app.DB.DB())
 	return nil
 }
 
