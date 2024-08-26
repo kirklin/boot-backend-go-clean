@@ -16,12 +16,14 @@ import (
 type authUseCase struct {
 	userRepo  repository.UserRepository
 	blacklist *auth.TokenBlacklist
+	config    *configs.AppConfig
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository, blacklist *auth.TokenBlacklist) usecase.AuthUseCase {
+func NewAuthUseCase(userRepo repository.UserRepository, blacklist *auth.TokenBlacklist, config *configs.AppConfig) usecase.AuthUseCase {
 	return &authUseCase{
 		userRepo:  userRepo,
 		blacklist: blacklist,
+		config:    config,
 	}
 }
 
@@ -119,8 +121,15 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	}, nil
 }
 
-func (a *authUseCase) Logout(refreshToken string, config *configs.AppConfig) error {
-	// 将刷新令牌添加到黑名单
-	a.blacklist.AddToken(refreshToken, time.Duration(config.RefreshTokenLifetime)*time.Hour)
+func (a *authUseCase) Logout(ctx context.Context, req *entity.LogoutRequest) error {
+	// 检查上下文是否已经取消或超时
+	select {
+	case <-ctx.Done():
+		return ctx.Err() // 返回上下文的错误信息
+	default:
+		// 将刷新令牌添加到黑名单
+		a.blacklist.AddToken(req.RefreshToken, time.Duration(a.config.RefreshTokenLifetime)*time.Hour)
+	}
+
 	return nil
 }

@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
-
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 )
 
@@ -23,5 +21,5 @@ type AuthUseCase interface {
 
 	// Logout invalidates the user's current session
 	// It takes a user ID and returns an error if the operation fails
-	Logout(refreshToken string, config *configs.AppConfig) error
+	Logout(ctx context.Context, req *entity.LogoutRequest) error
 }
