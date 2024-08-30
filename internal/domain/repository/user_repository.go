@@ -17,6 +17,5 @@ type UserRepository interface {
 }
 
 var (
-	ErrUserNotFound   = errors.New("user not found")
-	ErrNoRowsAffected = errors.New("no rows affected")
+	ErrUserNotFound = errors.New("user not found")
 )

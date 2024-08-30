@@ -19,14 +19,7 @@ func NewUserUseCase(userRepo repository.UserRepository) usecase.UserUseCase {
 }
 
 func (u *userUseCase) GetUserByID(ctx context.Context, id uint) (*entity.User, error) {
-	user, err := u.userRepo.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, repository.ErrUserNotFound
-	}
-	return user, nil
+	return u.userRepo.FindByID(ctx, id)
 }
 
 func (u *userUseCase) UpdateUser(ctx context.Context, user *entity.User) error {
@@ -34,23 +27,19 @@ func (u *userUseCase) UpdateUser(ctx context.Context, user *entity.User) error {
 		return err
 	}
 
-	existingUser, err := u.userRepo.FindByID(ctx, user.ID)
+	_, err := u.userRepo.FindByID(ctx, user.ID)
 	if err != nil {
 		return err
 	}
-	if existingUser == nil {
-		return repository.ErrUserNotFound
-	}
+
 	return u.userRepo.Update(ctx, user)
 }
 
 func (u *userUseCase) SoftDeleteUser(ctx context.Context, id uint) error {
-	existingUser, err := u.userRepo.FindByID(ctx, id)
+	_, err := u.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if existingUser == nil {
-		return repository.ErrUserNotFound
-	}
+
 	return u.userRepo.SoftDelete(ctx, id)
 }
