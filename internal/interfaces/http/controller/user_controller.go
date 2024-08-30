@@ -1,12 +1,12 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 )
 
@@ -23,90 +23,45 @@ func NewUserController(userUseCase usecase.UserUseCase) *UserController {
 func (c *UserController) GetUser(ctx *gin.Context) {
 	userID, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid user ID",
-			Error:   err.Error(),
-		})
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
 		return
 	}
 
 	user, err := c.userUseCase.GetUserByID(ctx, uint(userID))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to get user",
-			Error:   err.Error(),
-		})
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to get user", err))
 		return
 	}
 
-	if user == nil {
-		ctx.JSON(http.StatusNotFound, response.ErrorResponse{
-			Status:  "error",
-			Message: "User not found",
-		})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.SuccessResponse{
-		Status:  "success",
-		Message: "User retrieved successfully",
-		Data:    user,
-	})
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User retrieved successfully", user))
 }
 
 func (c *UserController) UpdateUser(ctx *gin.Context) {
 	var user entity.User
 	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid input",
-			Error:   err.Error(),
-		})
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid input", err))
 		return
 	}
 
-	err := c.userUseCase.UpdateUser(ctx, &user)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to update user",
-			Error:   err.Error(),
-		})
+	if err := c.userUseCase.UpdateUser(ctx, &user); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to update user", err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessResponse{
-		Status:  "success",
-		Message: "User updated successfully",
-		Data:    user,
-	})
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User updated successfully", nil))
 }
 
 func (c *UserController) DeleteUser(ctx *gin.Context) {
 	userID, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid user ID",
-			Error:   err.Error(),
-		})
+		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
 		return
 	}
 
-	err = c.userUseCase.SoftDeleteUser(ctx, uint(userID))
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Failed to delete user",
-			Error:   err.Error(),
-		})
+	if err := c.userUseCase.SoftDeleteUser(ctx, uint(userID)); err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete user", err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessResponse{
-		Status:  "success",
-		Message: "User deleted successfully",
-	})
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User deleted successfully", nil))
 }
