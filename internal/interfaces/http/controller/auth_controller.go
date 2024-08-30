@@ -22,110 +22,75 @@ func NewAuthController(authUseCase usecase.AuthUseCase) *AuthController {
 func (c *AuthController) Register(ctx *gin.Context) {
 	var req entity.RegisterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid input",
-			Error:   err.Error(),
-		})
+		resp := response.NewErrorResponse("Invalid input", err)
+		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
 
 	resp, err := c.authUseCase.Register(ctx, &req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Registration failed",
-			Error:   err.Error(),
-		})
+		errorResp := response.NewErrorResponse("Registration failed", err)
+		ctx.JSON(http.StatusInternalServerError, errorResp)
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.SuccessResponse{
-		Status:  "success",
-		Message: "User registered successfully",
-		Data:    resp,
-	})
+	successResp := response.NewSuccessResponse("User registered successfully", resp)
+	ctx.JSON(http.StatusCreated, successResp)
 }
 
 func (c *AuthController) Login(ctx *gin.Context) {
 	var req entity.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid input",
-			Error:   err.Error(),
-		})
+		resp := response.NewErrorResponse("Invalid input", err)
+		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
 
 	resp, err := c.authUseCase.Login(ctx, &req)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, response.ErrorResponse{
-			Status:  "error",
-			Message: "Login failed",
-			Error:   err.Error(),
-		})
+		errorResp := response.NewErrorResponse("Login failed", err)
+		ctx.JSON(http.StatusUnauthorized, errorResp)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessResponse{
-		Status:  "success",
-		Message: "Login successful",
-		Data:    resp,
-	})
+	successResp := response.NewSuccessResponse("Login successful", resp)
+	ctx.JSON(http.StatusOK, successResp)
 }
 
 func (c *AuthController) RefreshToken(ctx *gin.Context) {
 	var req entity.RefreshTokenRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid input",
-			Error:   err.Error(),
-		})
+		resp := response.NewErrorResponse("Invalid input", err)
+		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
 
 	resp, err := c.authUseCase.RefreshToken(ctx, &req)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, response.ErrorResponse{
-			Status:  "error",
-			Message: "Token refresh failed",
-			Error:   err.Error(),
-		})
+		errorResp := response.NewErrorResponse("Token refresh failed", err)
+		ctx.JSON(http.StatusUnauthorized, errorResp)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessResponse{
-		Status:  "success",
-		Message: "Token refreshed successfully",
-		Data:    resp,
-	})
+	successResp := response.NewSuccessResponse("Token refreshed successfully", resp)
+	ctx.JSON(http.StatusOK, successResp)
 }
 
 func (c *AuthController) Logout(ctx *gin.Context) {
 	var req entity.LogoutRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid input",
-			Error:   err.Error(),
-		})
+		resp := response.NewErrorResponse("Invalid input", err)
+		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
 
 	err := c.authUseCase.Logout(ctx, &req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, response.ErrorResponse{
-			Status:  "error",
-			Message: "Logout failed",
-			Error:   err.Error(),
-		})
+		errorResp := response.NewErrorResponse("Logout failed", err)
+		ctx.JSON(http.StatusInternalServerError, errorResp)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.SuccessResponse{
-		Status:  "success",
-		Message: "Logged out successfully",
-	})
+	successResp := response.NewSuccessResponse[any]("Logged out successfully", nil)
+	ctx.JSON(http.StatusOK, successResp)
 }

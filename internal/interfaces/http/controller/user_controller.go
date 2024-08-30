@@ -48,7 +48,7 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User updated successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("User updated successfully", nil))
 }
 
 func (c *UserController) DeleteUser(ctx *gin.Context) {
@@ -63,5 +63,5 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User deleted successfully", nil))
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("User deleted successfully", nil))
 }

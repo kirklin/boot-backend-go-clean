@@ -13,7 +13,7 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 	// Public routes
 	publicRouter := router.Group("")
 	publicRouter.GET("/health", func(c *gin.Context) {
-		c.JSON(200, response.NewSuccessResponse("success", nil))
+		c.JSON(200, response.NewSuccessResponse[any]("success", nil))
 	})
 
 	// API routes
