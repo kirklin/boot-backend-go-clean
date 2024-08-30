@@ -30,7 +30,7 @@ func NewAuthUseCase(userRepo repository.UserRepository, blacklist *auth.TokenBla
 func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest) (*entity.RegisterResponse, error) {
 	// Check if user already exists
 	existingUser, err := a.userRepo.FindByUsername(ctx, req.Username)
-	if err != nil {
+	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
 		return nil, err
 	}
 	if existingUser != nil {
@@ -61,10 +61,10 @@ func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest)
 func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*entity.LoginResponse, error) {
 	user, err := a.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, repository.ErrUserNotFound
+		}
 		return nil, err
-	}
-	if user == nil {
-		return nil, errors.New("user not found")
 	}
 
 	// Check password
@@ -88,7 +88,6 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 }
 
 func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error) {
-
 	if a.blacklist.IsTokenBlacklisted(req.RefreshToken) {
 		return nil, errors.New("refresh token is blacklisted")
 	}
@@ -102,10 +101,10 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	// Get user
 	user, err := a.userRepo.FindByID(ctx, refreshClaims.UserID)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, repository.ErrUserNotFound
+		}
 		return nil, err
-	}
-	if user == nil {
-		return nil, errors.New("user not found")
 	}
 
 	// Generate new token pair
