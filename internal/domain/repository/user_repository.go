@@ -12,5 +12,5 @@ type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*entity.User, error)
 	FindByEmail(ctx context.Context, email string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
-	SoftDelete(ctx context.Context, id uint) error // 修改为 SoftDelete
+	SoftDelete(ctx context.Context, id uint) error
 }
