@@ -1,21 +1,40 @@
 services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: app
+    container_name: app
+    env_file: .env
+    environment:
+      - PORT=5001
+    ports:
+      - "$PORT:$PORT"
+    networks:
+      - webapi_network
+    depends_on:
+      - postgres
+    restart: unless-stopped
 
-  db:
+  ####################### POSTGRES #######################
+  postgres:
     image: postgres:15-alpine
+    container_name: postgres_container
     environment:
       POSTGRES_USER: 'postgres'
       POSTGRES_PASSWORD: 'password'
       POSTGRES_DB: 'myapp'
+      PGDATA: /data/postgres
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres:/data/postgres
     networks:
-      - myapp-network
+      - webapi_network
+    restart: unless-stopped
 
 networks:
-  myapp-network:
-    driver: bridge
+  webapi_network:
 
 volumes:
-  postgres-data:
+  postgres:
