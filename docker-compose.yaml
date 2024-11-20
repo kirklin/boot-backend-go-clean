@@ -10,8 +10,6 @@ services:
       - PORT=5001
     ports:
       - "$PORT:$PORT"
-    networks:
-      - webapi_network
     depends_on:
       - postgres
     restart: unless-stopped
@@ -29,12 +27,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres:/data/postgres
-    networks:
-      - webapi_network
     restart: unless-stopped
-
-networks:
-  webapi_network:
 
 volumes:
   postgres:
