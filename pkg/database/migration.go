@@ -1,12 +1,12 @@
 package database
 
 import (
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence/model"
 )
 
 func AutoMigrate(db Database) error {
 	return db.DB().AutoMigrate(
-		&entity.User{},
+		&model.UserDTO{},
 		// 添加其他实体模型
 	)
 }
