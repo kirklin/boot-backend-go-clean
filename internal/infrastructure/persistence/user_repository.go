@@ -25,7 +25,15 @@ func NewUserRepository(db database.Database) repository.UserRepository {
 func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 	dto := model.UserDTO{}
 	dto.ConvertFromEntity(user)
-	return r.db.DB().WithContext(ctx).Create(&dto).Error
+
+	err := r.db.DB().WithContext(ctx).Create(&dto).Error
+	if err != nil {
+		return err
+	}
+
+	// 在创建成功后，把 DTO 的 ID 同步回领域实体
+	*user = *dto.ConvertToEntity()
+	return nil
 }
 
 // FindByID retrieves a user by their ID
