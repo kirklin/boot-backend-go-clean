@@ -1,19 +1,21 @@
 package entity
 
 import (
+	"database/sql"
 	"errors"
 	"regexp"
 	"time"
 )
 
 type User struct {
-	ID        uint       `json:"id"`
-	Username  string     `json:"username"`
-	Email     string     `json:"email"`
-	Password  string     `json:"-"` // 不在 JSON 中显示密码
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at"` // 用于逻辑删除
+	ID        int64        `json:"id,string"`
+	Username  string       `json:"username"`
+	Email     string       `json:"email"`
+	Password  string       `json:"-"`                    // 不在 JSON 中显示密码
+	AvatarURL *string      `json:"avatar_url,omitempty"` // 头像 URL（可选）
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+	DeletedAt sql.NullTime `json:"deleted_at"` // 用于逻辑删除
 }
 
 // Validate 验证用户实体

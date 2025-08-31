@@ -9,15 +9,15 @@ type TokenPair struct {
 }
 
 type AccessTokenClaims struct {
-	UserID   uint   `json:"user_id"`
+	UserID   int64  `json:"user_id,string"`
 	Username string `json:"username"`
 }
 
 type RefreshTokenClaims struct {
-	UserID uint `json:"user_id"`
+	UserID int64 `json:"user_id,string"`
 }
 type StandardClaims struct {
-	IssuedAt  int64  `json:"iat"`
-	ExpiresAt int64  `json:"exp"`
+	IssuedAt  int64  `json:"iat,string"`
+	ExpiresAt int64  `json:"exp,string"`
 	Issuer    string `json:"iss"`
 }

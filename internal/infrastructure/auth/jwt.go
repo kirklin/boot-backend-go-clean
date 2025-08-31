@@ -88,7 +88,7 @@ func ValidateAccessToken(tokenString string) (*entity.AccessTokenClaims, *entity
 	username, _ := claims["username"].(string)
 
 	accessClaims := &entity.AccessTokenClaims{
-		UserID:   uint(userID),
+		UserID:   int64(userID),
 		Username: username,
 	}
 
@@ -107,7 +107,7 @@ func ValidateRefreshToken(tokenString string) (*entity.RefreshTokenClaims, *enti
 	userID, _ := claims["user_id"].(float64)
 
 	refreshClaims := &entity.RefreshTokenClaims{
-		UserID: uint(userID),
+		UserID: int64(userID),
 	}
 
 	standardClaims := extractStandardClaims(claims)

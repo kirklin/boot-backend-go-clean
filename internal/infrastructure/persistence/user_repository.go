@@ -37,7 +37,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 }
 
 // FindByID retrieves a user by their ID
-func (r *userRepository) FindByID(ctx context.Context, id uint) (*entity.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id int64) (*entity.User, error) {
 	var dto model.UserDTO
 	err := r.db.DB().WithContext(ctx).First(&dto, id).Error
 	return r.handleQueryResult(&dto, err)
@@ -72,7 +72,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 }
 
 // SoftDelete marks a user as deleted in the database
-func (r *userRepository) SoftDelete(ctx context.Context, id uint) error {
+func (r *userRepository) SoftDelete(ctx context.Context, id int64) error {
 	result := r.db.DB().WithContext(ctx).Delete(&model.UserDTO{}, id)
 	if result.Error != nil {
 		return result.Error

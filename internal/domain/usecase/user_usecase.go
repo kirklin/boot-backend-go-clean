@@ -10,7 +10,7 @@ import (
 type UserUseCase interface {
 	// GetUserByID retrieves a user by their ID
 	// It takes a user ID and returns the corresponding User entity
-	GetUserByID(ctx context.Context, id uint) (*entity.User, error)
+	GetUserByID(ctx context.Context, id int64) (*entity.User, error)
 
 	// UpdateUser updates the information of an existing user
 	// It takes a User entity with updated information and returns an error if the operation fails
@@ -18,5 +18,5 @@ type UserUseCase interface {
 
 	// SoftDeleteUser marks a user as deleted in the system
 	// It takes a user ID and returns an error if the operation fails
-	SoftDeleteUser(ctx context.Context, id uint) error
+	SoftDeleteUser(ctx context.Context, id int64) error
 }

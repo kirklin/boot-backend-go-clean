@@ -21,13 +21,13 @@ func NewUserController(userUseCase usecase.UserUseCase) *UserController {
 }
 
 func (c *UserController) GetUser(ctx *gin.Context) {
-	userID, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	userID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
 		return
 	}
 
-	user, err := c.userUseCase.GetUserByID(ctx, uint(userID))
+	user, err := c.userUseCase.GetUserByID(ctx, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to get user", err))
 		return
@@ -52,13 +52,13 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 }
 
 func (c *UserController) DeleteUser(ctx *gin.Context) {
-	userID, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	userID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
 		return
 	}
 
-	if err := c.userUseCase.SoftDeleteUser(ctx, uint(userID)); err != nil {
+	if err := c.userUseCase.SoftDeleteUser(ctx, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to delete user", err))
 		return
 	}

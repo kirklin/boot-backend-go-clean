@@ -18,7 +18,7 @@ func NewUserUseCase(userRepo repository.UserRepository) usecase.UserUseCase {
 	}
 }
 
-func (u *userUseCase) GetUserByID(ctx context.Context, id uint) (*entity.User, error) {
+func (u *userUseCase) GetUserByID(ctx context.Context, id int64) (*entity.User, error) {
 	return u.userRepo.FindByID(ctx, id)
 }
 
@@ -35,7 +35,7 @@ func (u *userUseCase) UpdateUser(ctx context.Context, user *entity.User) error {
 	return u.userRepo.Update(ctx, user)
 }
 
-func (u *userUseCase) SoftDeleteUser(ctx context.Context, id uint) error {
+func (u *userUseCase) SoftDeleteUser(ctx context.Context, id int64) error {
 	_, err := u.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return err

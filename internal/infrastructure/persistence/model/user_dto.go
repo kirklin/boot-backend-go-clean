@@ -1,19 +1,16 @@
 package model
 
 import (
-	"time"
-
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/pkg/utils/timeutil"
 )
 
 type UserDTO struct {
-	ID        uint       `json:"id" gorm:"primaryKey"`
-	Username  string     `json:"username" gorm:"unique;not null"`
-	Email     string     `json:"email" gorm:"unique;not null"`
-	Password  string     `json:"-" gorm:"not null"` // 不在 JSON 中显示密码
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at" gorm:"index"` // 用于逻辑删除
+	BaseModel
+	Username  string  `json:"username" gorm:"unique;not null"`
+	Email     string  `json:"email" gorm:"unique;not null"`
+	Password  string  `json:"-" gorm:"not null"` // 不在 JSON 中显示密码
+	AvatarURL *string `json:"avatar_url,omitempty"`
 }
 
 // TableName specifies the actual table name for UserDTO
@@ -28,9 +25,10 @@ func (dto *UserDTO) ConvertToEntity() *entity.User {
 		Username:  dto.Username,
 		Email:     dto.Email,
 		Password:  dto.Password,
+		AvatarURL: dto.AvatarURL,
 		CreatedAt: dto.CreatedAt,
 		UpdatedAt: dto.UpdatedAt,
-		DeletedAt: dto.DeletedAt,
+		DeletedAt: timeutil.ToSqlNullTime(dto.DeletedAt),
 	}
 }
 
@@ -40,7 +38,8 @@ func (dto *UserDTO) ConvertFromEntity(u *entity.User) {
 	dto.Username = u.Username
 	dto.Email = u.Email
 	dto.Password = u.Password
+	dto.AvatarURL = u.AvatarURL
 	dto.CreatedAt = u.CreatedAt
 	dto.UpdatedAt = u.UpdatedAt
-	dto.DeletedAt = u.DeletedAt
+	dto.DeletedAt = timeutil.ToGormDeletedAt(u.DeletedAt)
 }
