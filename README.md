@@ -191,6 +191,60 @@ go build -o app cmd/main.go
 ./app
 ```
 
+### 使用 Docker 部署
+
+本项目已完全容器化，推荐使用 Docker Compose 进行部署，以确保环境的一致性和部署的便捷性。
+
+**前置条件**
+
+- Docker
+- Docker Compose
+
+**部署步骤**
+
+1.  **准备配置文件**:
+    
+    首先，复制环境变量模板文件：
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    然后，根据你的需求修改 `.env` 文件。请特别注意，`DATABASE_HOST` 必须设置为 `postgres`，以便应用程序容器可以找到数据库容器。
+
+2.  **构建并启动服务**:
+    
+    在项目根目录下，运行以下命令来构建镜像并以后台模式启动所有服务：
+    
+    ```bash
+    docker compose up -d --build
+    ```
+
+3.  **验证状态**:
+    
+    检查容器是否正在运行：
+    
+    ```bash
+    docker compose ps
+    ```
+    
+    你应该能看到 `web` 和 `postgres` 两个服务都处于 "running" 或 "up" 状态。
+
+4.  **查看日志**:
+    
+    如果需要查看应用程序的实时日志，可以运行：
+    
+    ```bash
+    docker compose logs -f web
+    ```
+
+5.  **停止服务**:
+    
+    当需要停止所有服务时，运行：
+    
+    ```bash
+    docker compose down
+    ```
 ## 许可证
 
 本项目采用 Apache 许可证。详情请见 [LICENSE](LICENSE) 文件。
