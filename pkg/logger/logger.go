@@ -4,8 +4,34 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
+
+// Global logger instance
+var globalLogger Logger
+
+// InitLogger initializes the global logger instance
+func InitLogger(config *LoggerConfig) error {
+	logger, err := NewLogger(config, "zap")
+	if err != nil {
+		return fmt.Errorf("初始化日志器失败: %v", err)
+	}
+	globalLogger = logger
+	return nil
+}
+
+// GetLogger returns the global logger instance
+func GetLogger() Logger {
+	if globalLogger == nil {
+		// If global logger is not initialized, initialize with default configuration
+		config := NewDefaultConfig()
+		if err := InitLogger(config); err != nil {
+			panic(fmt.Sprintf("Failed to initialize default logger: %v", err))
+		}
+	}
+	return globalLogger
+}
 
 // LogLevel defines the severity of a log message
 // LogLevel 定义日志消息的严重程度
@@ -162,6 +188,50 @@ type LoggerConfig struct {
 	// InitialFields specifies a collection of fields to add to all log messages
 	// InitialFields 指定要添加到所有日志消息的字段集合
 	InitialFields Fields
+
+	// FileConfig specifies the configuration for file logging
+	// FileConfig 指定文件日志的配置
+	FileConfig *FileLogConfig
+}
+
+// FileLogConfig defines configuration for file logging
+// FileLogConfig 定义文件日志的配置
+type FileLogConfig struct {
+	// Enable enables file logging
+	// Enable 启用文件日志
+	Enable bool
+
+	// Environment specifies the running environment (e.g., development, production, testing)
+	// Environment 指定运行环境（例如：development、production、testing）
+	Environment string
+
+	// Directory specifies the base directory for log files
+	// Directory 指定日志文件的基础目录
+	Directory string
+
+	// Filename is the file to write logs to
+	// Filename 是写入日志的文件
+	Filename string
+
+	// MaxSize is the maximum size in megabytes of the log file before it gets rotated
+	// MaxSize 是日志文件在轮转之前的最大大小（以兆字节为单位）
+	MaxSize int
+
+	// MaxBackups is the maximum number of old log files to retain
+	// MaxBackups 是要保留的旧日志文件的最大数量
+	MaxBackups int
+
+	// MaxAge is the maximum number of days to retain old log files
+	// MaxAge 是保留旧日志文件的最大天数
+	MaxAge int
+
+	// Compress determines if the rotated log files should be compressed
+	// Compress 确定是否应压缩轮转的日志文件
+	Compress bool
+
+	// UseLocalTime determines if local time is used for log file names
+	// UseLocalTime 确定是否使用本地时间作为日志文件名
+	UseLocalTime bool
 }
 
 // ConfigurableLogger defines an optional interface for loggers that allow changing output and format
@@ -194,5 +264,26 @@ func ConfigureLoggerOutputAndFormat(logger Logger, writer io.Writer, format LogF
 	} else {
 		// 不支持 SetOutput 或 SetFormat 的日志实现
 		fmt.Println("Logger does not support output or format configuration")
+	}
+}
+
+// NewDefaultConfig returns a default logger configuration
+func NewDefaultConfig() *LoggerConfig {
+	return &LoggerConfig{
+		Level:            InfoLevel,
+		Format:           JSONFormat,
+		EnableCaller:     true,
+		EnableStacktrace: true,
+		FileConfig: &FileLogConfig{
+			Enable:       true,
+			Environment:  os.Getenv("APP_ENVIRONMENT"),
+			Directory:    "logs",
+			Filename:     "app.log",
+			MaxSize:      100,  // 100MB
+			MaxBackups:   30,   // 保留30个备份
+			MaxAge:       7,    // 保留7天
+			Compress:     true, // 压缩轮转的日志
+			UseLocalTime: true, // 使用本地时间
+		},
 	}
 }

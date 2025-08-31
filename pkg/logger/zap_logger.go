@@ -2,12 +2,15 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type zapLogger struct {
@@ -36,14 +39,40 @@ func NewZapLogger(config *LoggerConfig) (Logger, error) {
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
 	}
 
+	var cores []zapcore.Core
+
+	// 标准输出
 	writer := zapcore.AddSync(os.Stdout)
 	if config.Output != nil {
 		writer = zapcore.AddSync(config.Output)
 	}
+	cores = append(cores, zapcore.NewCore(encoder, writer, atomicLevel))
 
-	core := zapcore.NewCore(encoder, writer, atomicLevel)
+	// 文件输出
+	if config.FileConfig != nil && config.FileConfig.Enable {
+		// 构建完整的日志路径
+		logDir := filepath.Join(config.FileConfig.Directory, config.FileConfig.Environment)
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			return nil, fmt.Errorf("创建日志目录失败: %v", err)
+		}
 
-	zapOptions := []zap.Option{zap.AddCallerSkip(1)} // 添加这行以跳过包装器函数
+		filename := filepath.Join(logDir, config.FileConfig.Filename)
+
+		fileWriter := zapcore.AddSync(&lumberjack.Logger{
+			Filename:   filename,
+			MaxSize:    config.FileConfig.MaxSize,
+			MaxBackups: config.FileConfig.MaxBackups,
+			MaxAge:     config.FileConfig.MaxAge,
+			Compress:   config.FileConfig.Compress,
+			LocalTime:  config.FileConfig.UseLocalTime,
+		})
+
+		cores = append(cores, zapcore.NewCore(encoder, fileWriter, atomicLevel))
+	}
+
+	core := zapcore.NewTee(cores...)
+
+	zapOptions := []zap.Option{zap.AddCallerSkip(1)}
 
 	if config.EnableCaller {
 		zapOptions = append(zapOptions, zap.AddCaller())

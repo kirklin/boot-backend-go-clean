@@ -6,21 +6,53 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type slogLogger struct {
-	logger *slog.Logger
-	level  LogLevel
-	opts   *slog.HandlerOptions
-	output io.Writer
+	logger  *slog.Logger
+	level   LogLevel
+	opts    *slog.HandlerOptions
+	output  io.Writer
+	writers []io.Writer
 }
 
 func NewSlogLogger(config *LoggerConfig) (Logger, error) {
+	var writers []io.Writer
+
+	// 标准输出
 	var output io.Writer = os.Stdout
 	if config.Output != nil {
 		output = config.Output
 	}
+	writers = append(writers, output)
+
+	// 文件输出
+	if config.FileConfig != nil && config.FileConfig.Enable {
+		// 构建完整的日志路径
+		logDir := filepath.Join(config.FileConfig.Directory, config.FileConfig.Environment)
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			return nil, fmt.Errorf("创建日志目录失败: %v", err)
+		}
+
+		filename := filepath.Join(logDir, config.FileConfig.Filename)
+
+		fileWriter := &lumberjack.Logger{
+			Filename:   filename,
+			MaxSize:    config.FileConfig.MaxSize,
+			MaxBackups: config.FileConfig.MaxBackups,
+			MaxAge:     config.FileConfig.MaxAge,
+			Compress:   config.FileConfig.Compress,
+			LocalTime:  config.FileConfig.UseLocalTime,
+		}
+		writers = append(writers, fileWriter)
+	}
+
+	// 使用 MultiWriter 组合所有输出
+	multiWriter := io.MultiWriter(writers...)
 
 	opts := &slog.HandlerOptions{
 		Level:     convertToSlogLevel(config.Level),
@@ -29,9 +61,9 @@ func NewSlogLogger(config *LoggerConfig) (Logger, error) {
 
 	var handler slog.Handler
 	if config.Format == JSONFormat {
-		handler = slog.NewJSONHandler(output, opts)
+		handler = slog.NewJSONHandler(multiWriter, opts)
 	} else {
-		handler = slog.NewTextHandler(output, opts)
+		handler = slog.NewTextHandler(multiWriter, opts)
 	}
 
 	if len(config.InitialFields) > 0 {
@@ -45,10 +77,11 @@ func NewSlogLogger(config *LoggerConfig) (Logger, error) {
 	logger := slog.New(handler)
 
 	return &slogLogger{
-		logger: logger,
-		level:  config.Level,
-		opts:   opts,
-		output: output,
+		logger:  logger,
+		level:   config.Level,
+		opts:    opts,
+		output:  multiWriter,
+		writers: writers,
 	}, nil
 }
 
@@ -151,8 +184,15 @@ func (l *slogLogger) SetFormat(format LogFormat) {
 }
 
 func (l *slogLogger) Sync() error {
-	// slog doesn't require explicit syncing
-	return nil
+	var syncErr error
+	for _, writer := range l.writers {
+		if syncer, ok := writer.(interface{ Sync() error }); ok {
+			if err := syncer.Sync(); err != nil {
+				syncErr = err
+			}
+		}
+	}
+	return syncErr
 }
 
 func (l *slogLogger) Clone() Logger {

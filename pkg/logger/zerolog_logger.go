@@ -2,39 +2,73 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/rs/zerolog"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type zerologLogger struct {
-	logger zerolog.Logger
-	level  LogLevel
-	config *LoggerConfig
+	logger  zerolog.Logger
+	level   LogLevel
+	config  *LoggerConfig
+	writers []io.Writer
 }
 
 func NewZerologLogger(config *LoggerConfig) (Logger, error) {
-	// 设置输出
+	var writers []io.Writer
+
+	// 标准输出
 	var output io.Writer = os.Stdout
 	if config.Output != nil {
 		output = config.Output
 	}
 
+	// 根据格式配置输出
+	var consoleWriter io.Writer
+	if config.Format == TextFormat {
+		consoleWriter = zerolog.ConsoleWriter{
+			Out:        output,
+			TimeFormat: time.RFC3339,
+		}
+	} else {
+		consoleWriter = output
+	}
+	writers = append(writers, consoleWriter)
+
+	// 文件输出
+	if config.FileConfig != nil && config.FileConfig.Enable {
+		// 构建完整的日志路径
+		logDir := filepath.Join(config.FileConfig.Directory, config.FileConfig.Environment)
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			return nil, fmt.Errorf("创建日志目录失败: %v", err)
+		}
+
+		filename := filepath.Join(logDir, config.FileConfig.Filename)
+
+		fileWriter := &lumberjack.Logger{
+			Filename:   filename,
+			MaxSize:    config.FileConfig.MaxSize,
+			MaxBackups: config.FileConfig.MaxBackups,
+			MaxAge:     config.FileConfig.MaxAge,
+			Compress:   config.FileConfig.Compress,
+			LocalTime:  config.FileConfig.UseLocalTime,
+		}
+		writers = append(writers, fileWriter)
+	}
+
+	// 使用 MultiWriter 组合所有输出
+	multiWriter := zerolog.MultiLevelWriter(writers...)
+
 	// 设置日志级别
 	level := convertToZerologLevel(config.Level)
 
-	// 创建zerolog.Logger
-	zl := zerolog.New(output).Level(level).With().Timestamp().Logger()
-
-	// 设置日志格式
-	switch config.Format {
-	case JSONFormat:
-		// JSON 是 zerolog 的默认格式，无需额外设置
-	case TextFormat:
-		zl = zl.Output(zerolog.ConsoleWriter{Out: output, TimeFormat: time.RFC3339})
-	}
+	// 创建 zerolog.Logger
+	zl := zerolog.New(multiWriter).Level(level).With().Timestamp().Logger()
 
 	// 添加初始字段
 	if len(config.InitialFields) > 0 {
@@ -52,9 +86,10 @@ func NewZerologLogger(config *LoggerConfig) (Logger, error) {
 	}
 
 	return &zerologLogger{
-		logger: zl,
-		level:  config.Level,
-		config: config, // 保存配置以便后续使用
+		logger:  zl,
+		level:   config.Level,
+		config:  config,
+		writers: writers,
 	}, nil
 }
 
@@ -149,8 +184,15 @@ func (l *zerologLogger) GetLevel() LogLevel {
 }
 
 func (l *zerologLogger) Sync() error {
-	// Zerolog doesn't require syncing
-	return nil
+	var syncErr error
+	for _, writer := range l.writers {
+		if syncer, ok := writer.(interface{ Sync() error }); ok {
+			if err := syncer.Sync(); err != nil {
+				syncErr = err
+			}
+		}
+	}
+	return syncErr
 }
 
 func (l *zerologLogger) Clone() Logger {
