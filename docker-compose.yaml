@@ -3,31 +3,45 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: app
+    image: boot-backend-go-clean:latest
     container_name: app
-    env_file: .env
-    environment:
-      - PORT=5001
+    env_file:
+      - .env
     ports:
-      - "$PORT:$PORT"
+      - "${PORT}:${PORT}"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - app-network
 
   ####################### POSTGRES #######################
   postgres:
-    image: postgres:15-alpine
-    container_name: postgres_container
+    image: postgres:17-alpine
+    container_name: postgres
     environment:
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'password'
-      POSTGRES_DB: 'myapp'
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
       PGDATA: /data/postgres
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT}:5432"
     volumes:
-      - postgres:/data/postgres
+      - postgres_data:/data/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
-  postgres:
+  postgres_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
