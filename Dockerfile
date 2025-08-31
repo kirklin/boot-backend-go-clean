@@ -1,5 +1,5 @@
 # 使用官方 Golang 镜像作为基础镜像
-FROM golang:1.23 AS builder
+FROM golang:1.25 AS builder
 
 # 设置 Go 代理以提高构建速度
 ENV GOPROXY=https://goproxy.cn,direct
