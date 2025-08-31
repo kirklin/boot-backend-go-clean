@@ -1,250 +1,128 @@
 # Boot Backend Go Clean
 
-这是一个基于Go语言和Clean Architecture的后端项目模板。它提供了一个结构化的方法来构建可扩展、可维护的Web应用程序。
+[**中文**](./README.zh-CN.md)
 
-## 项目结构
+### Introduction
+
+`Boot Backend Go Clean` is a production-ready backend template engineered with **Go** and the principles of **Clean Architecture**. It is designed to solve the common problem of unstructured, hard-to-maintain codebases by providing a clear separation of concerns. This template empowers developers to build scalable, testable, and adaptable applications where business logic is decoupled from external frameworks and infrastructure details.
+
+### The Philosophy of Clean Architecture
+
+The primary goal of Clean Architecture is to create systems that are:
+1.  **Independent of Frameworks**: The architecture does not depend on the existence of some library of feature-laden software. This allows you to use such frameworks as tools, rather than having to cram your system into their limited constraints.
+2.  **Testable**: The business rules can be tested without the UI, Database, Web Server, or any other external element.
+3.  **Independent of UI**: The UI can change easily, without changing the rest of the system.
+4.  **Independent of Database**: You can swap out PostgreSQL for MySQL, MongoDB, or something else entirely. Your business rules are not bound to the database.
+
+The mechanism that achieves this is the **Dependency Rule**, which states that *source code dependencies can only point inwards*. Inner layers define interfaces (abstractions), and outer layers provide the concrete implementations. This is an application of the Dependency Inversion Principle.
+
+-   **Domain Layer**: This is the heart of the application. It contains the most general, high-level business rules and entities. This layer is the most stable and should have no dependencies on any other layer in the project.
+-   **Use Case Layer**: This layer contains application-specific business logic. It orchestrates the flow of data to and from the domain entities to achieve the goals of a particular use case. It depends on the Domain Layer but has no knowledge of the layers outside it.
+-   **Interfaces Layer**: This layer acts as a set of adapters that convert data from a format convenient for external agents (like web browsers or test scripts) to a format convenient for the Use Case and Domain layers. It includes controllers and presenters.
+-   **Infrastructure Layer**: This outermost layer is where all the details go. It provides concrete implementations for the interfaces defined by the inner layers. This includes databases, the web framework, and any other external libraries.
+
+### Project Structure
 
 ```
 .
-├── cmd
-│   └── main.go                 # 应用程序入口点
+├── cmd                   # Application entry point
 ├── internal
-│   ├── domain                  # 领域层：核心业务逻辑和规则
-│   │   ├── entity              # 业务实体
-│   │   ├── repository          # 仓库接口
-│   │   └── usecase             # 用例接口
-│   ├── infrastructure          # 基础设施层：外部接口的实现
-│   │   ├── auth                # 认证相关实现
-│   │   └── persistence         # 数据持久化实现
-│   ├── interfaces              # 接口层：处理外部请求
-│   │   ├── http
-│   │       ├── controller      # HTTP控制器
-│   │       ├── middleware      # HTTP中间件
-│   │       └── route           # 路由定义
-│   ├── usecase                 # 用例层：业务逻辑实现
-│   └── app
-│       └── server              # 应用程序服务器设置
-├── pkg                         # 可重用的包
-│   ├── configs                 # 配置相关
-│   ├── database                # 数据库连接和管理
-│   └── logger                  # 日志工具
-├── migrations                  # 数据库迁移文件
-└── scripts                     # 各种脚本工具
+│   ├── app                 # Application setup (server)
+│   ├── domain              # Domain Layer: Core business logic, entities, and interfaces
+│   ├── infrastructure      # Infrastructure Layer: Concrete implementations (e.g., database)
+│   ├── interfaces          # Interfaces Layer: Controllers, middleware, routes
+│   └── usecase             # Use Case Layer: Implementation of business logic
+└── ...
 ```
 
-## Clean Architecture流程
+### Architecture Flow
 
 ```mermaid
-graph TD
-    A[外部请求] --> B[Interfaces Layer]
-    B --> C[Use Cases Layer]
-    C --> D[Domain Layer]
-    C --> E[Infrastructure Layer]
-    E --> F[外部服务/数据库]
-
-    subgraph "Domain Layer (internal/domain)"
-        D1[Entities]
-        D2[Repository Interfaces]
-        D3[Use Case Interfaces]
+graph LR
+    subgraph "Interfaces Layer"
+        A[HTTP Controller]
+    end
+    
+    subgraph "Use Case Layer"
+        B[Use Case]
     end
 
-    subgraph "Use Cases Layer (internal/domain/usecase)"
-        C1[Use Case Implementations]
+    subgraph "Domain Layer"
+        C[Entities]
+        D[Repository Interface]
     end
 
-    subgraph "Interfaces Layer (internal/interfaces)"
-        B1[HTTP Controllers]
-        B2[Middleware]
-        B3[Routes]
+    subgraph "Infrastructure Layer"
+        E[Repository Implementation]
+        F[Database]
     end
 
-    subgraph "Infrastructure Layer (internal/infrastructure)"
-        E1[Repository Implementations]
-        E2[Auth Services]
-        E3[Database Connections]
+    A -- Calls --> B
+    B -- Uses --> D
+    B -- Interacts with --> C
+    E -- Implements --> D
+    E -- Accesses --> F
+    
+    subgraph "Dependency Flow"
+        direction LR
+        Interfaces_Layer -- Depends on --> Use_Case_Layer
+        Infrastructure_Layer -- Depends on --> Use_Case_Layer
+        Use_Case_Layer -- Depends on --> Domain_Layer
     end
-
-    subgraph "Application Layer (internal/app)"
-        G[Server Setup]
-    end
-
-    D --> D1
-    D --> D2
-    D --> D3
-    C --> C1
-    B --> B1
-    B --> B2
-    B --> B3
-    E --> E1
-    E --> E2
-    E --> E3
-    G --> B
-    G --> C
-    G --> E
 ```
 
-### Clean Architecture的代码编写逻辑和执行流程：
+### Getting Started
 
-1. Domain Layer (`internal/domain`):
-   - 首先定义 Entities（实体）
-   - 然后定义 Repository Interfaces（仓库接口）
-   - 最后定义 Use Case Interfaces（用例接口）
+#### Prerequisites
 
-2. Use Cases Layer (`internal/usecase`):
-   - 实现 Use Case Interfaces，编写具体的业务逻辑
-
-3. Infrastructure Layer (`internal/infrastructure`):
-   - 实现 Repository Interfaces，处理数据持久化
-   - 实现认证服务、数据库连接等底层功能
-
-4. Interfaces Layer (`internal/interfaces`):
-   - 实现 HTTP Controllers，处理请求和响应
-   - 实现 Middleware，如认证、日志等
-   - 定义 Routes，设置 API 路由
-
-5. Application Layer (`internal/app`):
-   - 设置和配置服务器，组装各个组件
-
-#### 执行流程：
-
-1. 程序从 `cmd/main.go` 启动，初始化 Application Layer。
-2. Application Layer 设置服务器，组装各个组件。
-3. 外部请求通过 Interfaces Layer 的路由进入系统。
-4. 请求经过相应的 Middleware 处理。
-5. Controller 接收请求，调用相应的 Use Case。
-6. Use Case 实现业务逻辑，使用 Domain Layer 的实体和接口。
-7. 如需持久化或外部服务，Use Case 通过 Repository Interface 调用 Infrastructure Layer。
-8. Infrastructure Layer 与数据库或外部服务交互，返回结果。
-9. 结果沿着调用链返回，最终由 Controller 格式化响应并返回给客户端。
-
-#### 编写顺序建议：
-
-1. Domain Layer: 实体 -> 仓库接口 -> 用例接口
-2. Use Cases Layer: 用例实现
-3. Infrastructure Layer: 仓库实现、认证服务等
-4. Interfaces Layer: 控制器 -> 中间件 -> 路由
-5. Application Layer: 服务器设置和组件组装
-
-## 开始使用
-
-### 前置条件
-
-- Go 1.23+
+- Go 1.25.0+
 - PostgreSQL
+- Docker & Docker Compose (Recommended)
 
-### 安装
+#### Installation
 
-1. 克隆仓库：
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/kirklin/boot-backend-go-clean.git
+    cd boot-backend-go-clean
+    ```
+2.  **Set up environment variables**:
+    ```bash
+    cp .env.example .env
+    ```
+    *Modify `.env` with your local configuration.*
+3.  **Install dependencies**:
+    ```bash
+    go mod tidy
+    ```
+4.  **Run the application**:
+    ```bash
+    go run cmd/main.go
+    ```
 
-```bash
-git clone https://github.com/kirklin/boot-backend-go-clean.git
-cd boot-backend-go-clean
-```
+### Deployment with Docker (Recommended)
 
-2. 安装依赖：
+1.  **Prepare configuration**: Ensure your `.env` file is configured. For Docker, `DATABASE_HOST` should be the service name (`postgres`).
+2.  **Build and run**:
+    ```bash
+    docker-compose up -d --build
+    ```
+3.  **Verify status**:
+    ```bash
+    docker-compose ps
+    ```
+4.  **Stop services**:
+    ```bash
+    docker-compose down
+    ```
 
-```bash
-go mod tidy
-```
+### Testing
 
-3. 设置环境变量：
-
-复制 `.env.example` 到 `.env` 并根据你的环境进行修改。
-
-4. 运行应用：
-
-```bash
-go run cmd/main.go
-```
-
-## 开发指南
-
-### 添加新功能
-
-1. 在 `internal/domain/entity` 中定义新的实体。
-2. 在 `internal/domain/repository` 中定义新的仓库接口。
-3. 在 `internal/domain/usecase` 中定义新的用例接口。
-4. 在 `internal/usecase` 中实现用例。
-5. 在 `internal/infrastructure/persistence` 中实现仓库。
-6. 在 `internal/interfaces/http/controller` 中添加新的控制器。
-7. 在 `internal/interfaces/http/route` 中添加新的路由。
-
-## 测试
-
-运行所有测试：
-
+To run all tests:
 ```bash
 go test ./...
 ```
 
-## 部署
+### License
 
-1. 构建应用：
-
-```bash
-go build -o app cmd/main.go
-```
-
-2. 运行应用：
-
-```bash
-./app
-```
-
-### 使用 Docker 部署
-
-本项目已完全容器化，推荐使用 Docker Compose 进行部署，以确保环境的一致性和部署的便捷性。
-
-**前置条件**
-
-- Docker
-- Docker Compose
-
-**部署步骤**
-
-1.  **准备配置文件**:
-    
-    首先，复制环境变量模板文件：
-    
-    ```bash
-    cp .env.example .env
-    ```
-    
-    然后，根据你的需求修改 `.env` 文件。请特别注意，`DATABASE_HOST` 必须设置为 `postgres`，以便应用程序容器可以找到数据库容器。
-
-2.  **构建并启动服务**:
-    
-    在项目根目录下，运行以下命令来构建镜像并以后台模式启动所有服务：
-    
-    ```bash
-    docker compose up -d --build
-    ```
-
-3.  **验证状态**:
-    
-    检查容器是否正在运行：
-    
-    ```bash
-    docker compose ps
-    ```
-    
-    你应该能看到 `web` 和 `postgres` 两个服务都处于 "running" 或 "up" 状态。
-
-4.  **查看日志**:
-    
-    如果需要查看应用程序的实时日志，可以运行：
-    
-    ```bash
-    docker compose logs -f web
-    ```
-
-5.  **停止服务**:
-    
-    当需要停止所有服务时，运行：
-    
-    ```bash
-    docker compose down
-    ```
-## 许可证
-
-本项目采用 Apache 许可证。详情请见 [LICENSE](LICENSE) 文件。
+This project is licensed under the Apache License. See the [LICENSE](LICENSE) file for details.
