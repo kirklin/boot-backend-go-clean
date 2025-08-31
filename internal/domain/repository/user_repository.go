@@ -18,4 +18,7 @@ type UserRepository interface {
 
 var (
 	ErrUserNotFound = errors.New("user not found")
+
+	// ErrPermissionDenied 表示用户试图执行无权访问的操作或操作属于其他用户的数据。
+	ErrPermissionDenied = errors.New("permission denied for this operation")
 )

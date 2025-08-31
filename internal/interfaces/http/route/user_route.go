@@ -19,7 +19,11 @@ func NewUserRouter(db database.Database, group *gin.RouterGroup, config *configs
 	userRoutes.Use(middleware.JWTAuthMiddleware())
 	{
 		userRoutes.GET("/:id", uc.GetUser)
-		userRoutes.PUT("/:id", uc.UpdateUser)
-		userRoutes.DELETE("/:id", uc.DeleteUser)
+
+		// 获取当前用户信息
+		userRoutes.GET("/current", uc.GetCurrentUser)
+
+		// 更新用户资料，仅允许用户本人
+		userRoutes.PUT("/:id", middleware.EnsureSelfMiddleware(middleware.GetTargetUserIDFromParam), uc.UpdateUser)
 	}
 }

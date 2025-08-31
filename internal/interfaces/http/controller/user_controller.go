@@ -8,6 +8,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 )
 
 type UserController struct {
@@ -24,6 +25,22 @@ func (c *UserController) GetUser(ctx *gin.Context) {
 	userID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
+		return
+	}
+
+	user, err := c.userUseCase.GetUserByID(ctx, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to get user", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User retrieved successfully", user))
+}
+
+func (c *UserController) GetCurrentUser(ctx *gin.Context) {
+	userID, exists := middleware.GetUserIDFromContext(ctx)
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Unauthorized", nil))
 		return
 	}
 
