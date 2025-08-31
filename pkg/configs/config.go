@@ -2,8 +2,8 @@ package configs
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -43,7 +43,7 @@ func LoadConfig() (*AppConfig, error) {
 	}
 
 	if config.Environment == "development" {
-		log.Println("Application is running in development mode")
+		logger.GetLogger().Info("Application is running in development mode")
 	}
 
 	return config, nil

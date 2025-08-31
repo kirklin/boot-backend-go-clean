@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 )
@@ -260,8 +259,8 @@ func TestLoggerSetFormat(t *testing.T) {
 			t.Errorf("Log output is JSON when it should be text")
 		}
 	} else {
-		// 不支持 SetOutput 或 SetFormat 的日志实现
-		fmt.Println("Logger does not support output or format configuration")
+		// The logger implementation does not support SetOutput or SetFormat.
+		t.Log("Logger does not support output or format configuration")
 	}
 }
 

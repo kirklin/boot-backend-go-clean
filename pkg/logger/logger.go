@@ -15,7 +15,7 @@ var globalLogger Logger
 func InitLogger(config *LoggerConfig) error {
 	logger, err := NewLogger(config, "zap")
 	if err != nil {
-		return fmt.Errorf("初始化日志器失败: %v", err)
+		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 	globalLogger = logger
 	return nil
@@ -27,6 +27,7 @@ func GetLogger() Logger {
 		// If global logger is not initialized, initialize with default configuration
 		config := NewDefaultConfig()
 		if err := InitLogger(config); err != nil {
+			// At this point, the logger is not initialized, so we use the standard log package.
 			panic(fmt.Sprintf("Failed to initialize default logger: %v", err))
 		}
 	}
@@ -262,8 +263,8 @@ func ConfigureLoggerOutputAndFormat(logger Logger, writer io.Writer, format LogF
 		configurableLogger.SetOutput(writer)
 		configurableLogger.SetFormat(format)
 	} else {
-		// 不支持 SetOutput 或 SetFormat 的日志实现
-		fmt.Println("Logger does not support output or format configuration")
+		// The logger implementation does not support SetOutput or SetFormat.
+		GetLogger().Warn("Logger does not support output or format configuration")
 	}
 }
 

@@ -1,14 +1,27 @@
 package main
 
 import (
-	"github.com/kirklin/boot-backend-go-clean/internal/app/server"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/kirklin/boot-backend-go-clean/internal/app/server"
+	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
 )
 
 func main() {
+
+	config := logger.NewDefaultConfig()
+
+	if config.FileConfig.Environment == "" {
+		config.FileConfig.Environment = "development"
+	}
+
+	if err := logger.InitLogger(config); err != nil {
+		panic(err)
+	}
+	log := logger.GetLogger()
+
 	// Create a new application instance
 	app, err := server.NewApplication()
 	if err != nil {
@@ -31,15 +44,19 @@ func main() {
 		}
 	}()
 
-	log.Printf("Application is running on %s. Press CTRL+C to stop.", app.Config.ServerAddress)
+	log.Infof("Application is running on %s. Press CTRL+C to stop.", app.Config.ServerAddress)
 
 	// Wait for interrupt signal
 	<-stop
 
-	log.Println("Shutting down gracefully...")
+	log.Info("Shutting down gracefully...")
 
 	// Perform cleanup
 	app.Shutdown()
 
-	log.Println("Application stopped")
+	if err := logger.GetLogger().Sync(); err != nil {
+		log.Errorf("Failed to sync logger: %v", err)
+	}
+
+	log.Info("Application stopped")
 }

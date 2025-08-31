@@ -1,7 +1,9 @@
 package server
 
 import (
-	"fmt"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
@@ -9,7 +11,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
-	"time"
+	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
 )
 
 // Application holds the core components of the application
@@ -30,8 +32,10 @@ func NewApplication() (*Application, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// Redirect Gin's logs to our custom logger
+	gin.DefaultWriter = &ginLogWriter{logger: logger.GetLogger()}
 	router := gin.New()
-	router.Use(gin.Logger())
+	router.Use(gin.LoggerWithWriter(gin.DefaultWriter))
 	router.Use(gin.Recovery())
 
 	// Add timeout middleware
@@ -64,16 +68,16 @@ func (app *Application) Initialize() error {
 	case "mysql":
 		app.DB = mysql.NewMySQLDB()
 	default:
-		return fmt.Errorf("unsupported database type: %s", app.Config.DatabaseType)
+		logger.GetLogger().Fatalf("unsupported database type: %s", app.Config.DatabaseType)
 	}
 
 	err = app.DB.Connect(dbConfig)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		logger.GetLogger().Fatalf("failed to connect to database: %v", err)
 	}
 
 	if err := database.AutoMigrate(app.DB); err != nil {
-		return fmt.Errorf("failed to auto migrate: %w", err)
+		logger.GetLogger().Fatalf("failed to auto migrate: %v", err)
 	}
 
 	// Initialize JWT
@@ -103,4 +107,25 @@ func (app *Application) Shutdown() {
 	if app.DB != nil {
 		_ = app.DB.Close()
 	}
+}
+
+// ginLogWriter is a writer that redirects Gin's logs to our custom logger
+type ginLogWriter struct {
+	logger logger.Logger
+}
+
+func (w *ginLogWriter) Write(p []byte) (n int, err error) {
+	message := strings.TrimSpace(string(p))
+	// Parse log level from message
+	if strings.HasPrefix(message, "[GIN-debug] [WARNING]") {
+		w.logger.Warn(strings.TrimPrefix(message, "[GIN-debug] [WARNING] "))
+	} else if strings.HasPrefix(message, "[GIN-debug] [ERROR]") {
+		w.logger.Error(strings.TrimPrefix(message, "[GIN-debug] [ERROR] "))
+	} else if strings.HasPrefix(message, "[GIN-debug]") {
+		w.logger.Debug(strings.TrimPrefix(message, "[GIN-debug] "))
+	} else {
+		w.logger.Info(message)
+	}
+
+	return len(p), nil
 }

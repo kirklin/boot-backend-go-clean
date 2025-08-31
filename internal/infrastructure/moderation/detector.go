@@ -1,10 +1,10 @@
 package moderation
 
 import (
-	"log"
 	"sync"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
+	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
 	"github.com/kirklin/go-swd/pkg/core"
 	"github.com/kirklin/go-swd/pkg/swd"
 )
@@ -29,7 +29,7 @@ func (d *LocalModerationDetector) init() {
 		var err error
 		d.detector, err = swd.New(factory)
 		if err != nil {
-			log.Printf("初始化内容审核器失败: %v", err)
+			logger.GetLogger().Errorf("Failed to initialize content moderator: %v", err)
 			return
 		}
 	})

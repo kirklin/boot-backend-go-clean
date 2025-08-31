@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -9,7 +10,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Please provide a migration name")
+		log.Println("Please provide a migration name")
 		os.Exit(1)
 	}
 
@@ -21,11 +22,11 @@ func main() {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("Error creating migration: %v\n", err)
-		fmt.Println(string(output))
+		log.Printf("Error creating migration: %v\n", err)
+		log.Println(string(output))
 		os.Exit(1)
 	}
 
-	fmt.Println("Migration files created successfully")
-	fmt.Println(string(output))
+	log.Println("Migration files created successfully")
+	log.Println(string(output))
 }
