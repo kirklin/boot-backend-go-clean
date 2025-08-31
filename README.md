@@ -1,5 +1,7 @@
 # Boot Backend Go Clean
 
+![banner](docs/README.assets/banner.png)
+
 [**中文**](./README.zh-CN.md)
 
 ### Introduction

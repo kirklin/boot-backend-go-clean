@@ -1,5 +1,7 @@
 # Boot Backend Go Clean
 
+![banner](docs/README.assets/banner.png)
+
 [**English**](./README.md)
 
 ### 介绍
