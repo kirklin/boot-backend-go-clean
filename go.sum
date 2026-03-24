@@ -56,6 +56,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/kirklin/go-swd v0.0.2 h1:4kDS8s8HiGlxTGpCxJsbBBaTFqMyJCarOalosmCv9BI=
 github.com/kirklin/go-swd v0.0.2/go.mod h1:TK4K5sKZ5dQf2Rf1fulgsqhAh0fabnqm52LazoOEfX8=
+github.com/kirklin/snowflake v0.1.0 h1:6p3oVU3z2IN6QOlaHRdE7gC1Ji2jRjTdehU640jWZeM=
+github.com/kirklin/snowflake v0.1.0/go.mod h1:Ae/kltnYByDIMTnryGUGq260lqd7xMC/HyEu5xMcdXM=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
 github.com/klauspost/cpuid/v2 v2.3.0/go.mod h1:hqwkgyIinND0mEev00jJYCxPNVRVXFQeu1XKlok6oO0=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
