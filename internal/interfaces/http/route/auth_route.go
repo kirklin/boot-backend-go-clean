@@ -17,8 +17,9 @@ func NewAuthRouter(db database.Database, group *gin.RouterGroup, config *configs
 	tokenBlacklist := auth.NewTokenBlacklist()
 	ac := controller.NewAuthController(usecase.NewAuthUseCase(ur, tokenBlacklist, config))
 
-	group.POST("/register", ac.Register)
-	group.POST("/login", ac.Login)
-	group.POST("/refresh", ac.RefreshToken)
-	group.POST("/logout", middleware.JWTAuthMiddleware(), ac.Logout)
+	authGroup := group.Group("/auth")
+	authGroup.POST("/register", ac.Register)
+	authGroup.POST("/login", ac.Login)
+	authGroup.POST("/refresh", ac.RefreshToken)
+	authGroup.POST("/logout", middleware.JWTAuthMiddleware(), ac.Logout)
 }
