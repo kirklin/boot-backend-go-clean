@@ -1,5 +1,7 @@
 # Boot Backend Go Clean
 
+[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/boot-backend-go-clean)
+
 ![banner](docs/README.assets/banner.png)
 
 [**中文**](./README.zh-CN.md)
