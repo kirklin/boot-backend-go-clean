@@ -26,6 +26,10 @@ type AppConfig struct {
 	AccessTokenSecret    string `mapstructure:"ACCESS_TOKEN_SECRET"`
 	RefreshTokenSecret   string `mapstructure:"REFRESH_TOKEN_SECRET"`
 	JWTIssuer            string `mapstructure:"JWT_ISSUER"`
+	// Snowflake
+	SnowflakeEpoch       string `mapstructure:"SNOWFLAKE_EPOCH"`
+	SnowflakeMachineBits int    `mapstructure:"SNOWFLAKE_MACHINE_BITS"`
+	SnowflakeStepBits    int    `mapstructure:"SNOWFLAKE_STEP_BITS"`
 }
 
 // LoadConfig reads the configuration from .env file and environment variables

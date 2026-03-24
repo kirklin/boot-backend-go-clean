@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
 	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
+	snowflakeutils "github.com/kirklin/boot-backend-go-clean/pkg/utils/snowflake"
 )
 
 // Application holds the core components of the application
@@ -51,6 +53,15 @@ func NewApplication() (*Application, error) {
 
 // Initialize performs any necessary setup for the application
 func (app *Application) Initialize() error {
+	// Initialize Snowflake
+	if err := snowflakeutils.InitNode(&snowflakeutils.Config{
+		Epoch:       app.Config.SnowflakeEpoch,
+		MachineBits: app.Config.SnowflakeMachineBits,
+		StepBits:    app.Config.SnowflakeStepBits,
+	}); err != nil {
+		logger.GetLogger().Fatalf("failed to init snowflake node: %v", err)
+	}
+
 	// Initialize database
 	dbConfig := &database.Config{
 		Host:     app.Config.DatabaseHost,
@@ -116,15 +127,16 @@ type ginLogWriter struct {
 
 func (w *ginLogWriter) Write(p []byte) (n int, err error) {
 	message := strings.TrimSpace(string(p))
+	ctx := context.Background()
 	// Parse log level from message
 	if strings.HasPrefix(message, "[GIN-debug] [WARNING]") {
-		w.logger.Warn(strings.TrimPrefix(message, "[GIN-debug] [WARNING] "))
+		w.logger.Log(ctx, logger.WarnLevel, strings.TrimPrefix(message, "[GIN-debug] [WARNING] "), nil)
 	} else if strings.HasPrefix(message, "[GIN-debug] [ERROR]") {
-		w.logger.Error(strings.TrimPrefix(message, "[GIN-debug] [ERROR] "))
+		w.logger.Log(ctx, logger.ErrorLevel, strings.TrimPrefix(message, "[GIN-debug] [ERROR] "), nil)
 	} else if strings.HasPrefix(message, "[GIN-debug]") {
-		w.logger.Debug(strings.TrimPrefix(message, "[GIN-debug] "))
+		w.logger.Log(ctx, logger.DebugLevel, strings.TrimPrefix(message, "[GIN-debug] "), nil)
 	} else {
-		w.logger.Info(message)
+		w.logger.Log(ctx, logger.InfoLevel, message, nil)
 	}
 
 	return len(p), nil
