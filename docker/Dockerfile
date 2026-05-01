@@ -26,7 +26,11 @@ COPY pkg/ ./pkg/
 
 # Build application with extreme static linking and size reduction
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
-    -ldflags="-s -w -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -extldflags '-static'" \
+    -ldflags="-s -w \
+      -X github.com/kirklin/boot-backend-go-clean/pkg/version.Version=${VERSION} \
+      -X github.com/kirklin/boot-backend-go-clean/pkg/version.GitCommit=${GIT_COMMIT} \
+      -X github.com/kirklin/boot-backend-go-clean/pkg/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+      -extldflags '-static'" \
     -o main ./cmd/main.go
 
 # Build lightweight health check binary for Docker HEALTHCHECK

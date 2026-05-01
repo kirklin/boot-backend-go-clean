@@ -38,6 +38,13 @@ jobs:
         id: version
         run: |
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          # Use git tag if available, otherwise fallback to sha
+          TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+          if [ -n "$TAG" ]; then
+            echo "version=$TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
 
       # Build image but don't push yet (load to local docker for scanning)
       - name: Build Docker Image (Local Load)
@@ -49,6 +56,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scanning
           build-args: |
             GOPROXY=https://goproxy.cn,direct
+            VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       # Image Vulnerability Scanning
@@ -74,6 +82,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.commit }}
           build-args: |
             GOPROXY=https://goproxy.cn,direct
+            VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Copy Deployment Files to Server

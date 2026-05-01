@@ -38,6 +38,9 @@ jobs:
         id: version
         run: |
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          # Extract version from release branch name (e.g. release/1.2.0 → 1.2.0)
+          BRANCH_VERSION=$(echo "${{ github.ref_name }}" | sed 's|release/||')
+          echo "version=${BRANCH_VERSION}-rc" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker Image (Local Load)
         uses: docker/build-push-action@v7
@@ -48,6 +51,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scanning
           build-args: |
             GOPROXY=https://goproxy.cn,direct
+            VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Run Trivy vulnerability scanner
@@ -71,6 +75,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging-${{ steps.version.outputs.commit }}
           build-args: |
             GOPROXY=https://goproxy.cn,direct
+            VERSION=${{ steps.version.outputs.version }}
             GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Copy Deployment Files to Server

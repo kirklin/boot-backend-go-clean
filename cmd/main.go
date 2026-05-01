@@ -7,6 +7,7 @@ import (
 
 	"github.com/kirklin/boot-backend-go-clean/internal/app/server"
 	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
+	"github.com/kirklin/boot-backend-go-clean/pkg/version"
 )
 
 func main() {
@@ -21,6 +22,9 @@ func main() {
 		panic(err)
 	}
 	log := logger.GetLogger()
+
+	log.Infof("Boot Backend Go Clean — version=%s commit=%s built=%s",
+		version.Version, version.GitCommit, version.BuildTime)
 
 	// Create a new application instance
 	app, err := server.NewApplication()

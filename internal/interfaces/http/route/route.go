@@ -8,8 +8,8 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
-
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
+	"github.com/kirklin/boot-backend-go-clean/pkg/version"
 )
 
 // SetupRoutes configures the routes for the application
@@ -25,7 +25,9 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 	// Root route
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, response.NewSuccessResponse("Boot Backend Go Clean is running", gin.H{
-			"version": "1.0.0",
+			"version":    version.Version,
+			"git_commit": version.GitCommit,
+			"build_time": version.BuildTime,
 		}))
 	})
 
