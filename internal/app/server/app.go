@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
@@ -104,7 +105,7 @@ func (app *Application) Initialize() error {
 		logger.GetLogger().Fatalf("failed to connect to database: %v", err)
 	}
 
-	if err := database.AutoMigrate(app.DB); err != nil {
+	if err := persistence.AutoMigrate(app.DB); err != nil {
 		logger.GetLogger().Fatalf("failed to auto migrate: %v", err)
 	}
 
