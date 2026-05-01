@@ -22,8 +22,11 @@ type AppConfig struct {
 	DBPort     int    `mapstructure:"DB_PORT"`
 	DBUser     string `mapstructure:"DB_USER"`
 	DBPassword string `mapstructure:"DB_PASSWORD"`
-	DBName     string `mapstructure:"DB_NAME"`
-	DBSSLMode  string `mapstructure:"DB_SSL_MODE"`
+	DBName                   string `mapstructure:"DB_NAME"`
+	DBSSLMode                string `mapstructure:"DB_SSL_MODE"`
+	DBMaxIdleConns           int    `mapstructure:"DB_MAX_IDLE_CONNS"`
+	DBMaxOpenConns           int    `mapstructure:"DB_MAX_OPEN_CONNS"`
+	DBConnMaxLifetimeMinutes int    `mapstructure:"DB_CONN_MAX_LIFETIME_MINUTES"`
 	// JWT
 	AccessTokenLifetime  int    `mapstructure:"ACCESS_TOKEN_LIFETIME_HOURS"`
 	RefreshTokenLifetime int    `mapstructure:"REFRESH_TOKEN_LIFETIME_HOURS"`
@@ -68,6 +71,9 @@ func (c *AppConfig) Validate() error {
 	requireStr(c.DBUser, "DB_USER")
 	requireStr(c.DBPassword, "DB_PASSWORD")
 	requireStr(c.DBName, "DB_NAME")
+	requireInt(c.DBMaxIdleConns, "DB_MAX_IDLE_CONNS")
+	requireInt(c.DBMaxOpenConns, "DB_MAX_OPEN_CONNS")
+	requireInt(c.DBConnMaxLifetimeMinutes, "DB_CONN_MAX_LIFETIME_MINUTES")
 
 	// ---- JWT ----
 	requireStr(c.AccessTokenSecret, "ACCESS_TOKEN_SECRET")

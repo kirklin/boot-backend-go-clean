@@ -75,12 +75,15 @@ func (app *Application) Initialize() error {
 
 	// Initialize database
 	dbConfig := &database.Config{
-		Host:     app.Config.DBHost,
-		Port:     app.Config.DBPort,
-		User:     app.Config.DBUser,
-		Password: app.Config.DBPassword,
-		DBName:   app.Config.DBName,
-		SSLMode:  app.Config.DBSSLMode,
+		Host:                   app.Config.DBHost,
+		Port:                   app.Config.DBPort,
+		User:                   app.Config.DBUser,
+		Password:               app.Config.DBPassword,
+		DBName:                 app.Config.DBName,
+		SSLMode:                app.Config.DBSSLMode,
+		MaxIdleConns:           app.Config.DBMaxIdleConns,
+		MaxOpenConns:           app.Config.DBMaxOpenConns,
+		ConnMaxLifetimeMinutes: app.Config.DBConnMaxLifetimeMinutes,
 	}
 
 	var err error

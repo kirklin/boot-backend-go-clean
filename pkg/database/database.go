@@ -15,6 +15,9 @@ type Config struct {
 	Port     int
 	User     string
 	Password string
-	DBName   string
-	SSLMode  string
+	DBName                 string
+	SSLMode                string
+	MaxIdleConns           int
+	MaxOpenConns           int
+	ConnMaxLifetimeMinutes int
 }

@@ -2,6 +2,8 @@ package mysql
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -24,6 +26,15 @@ func (m *MySQLDB) Connect(config *database.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	sqlDB, err := m.db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get database instance for pooling config: %w", err)
+	}
+
+	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(config.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(time.Duration(config.ConnMaxLifetimeMinutes) * time.Minute)
 
 	return nil
 }
