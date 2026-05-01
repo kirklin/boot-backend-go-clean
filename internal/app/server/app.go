@@ -118,7 +118,7 @@ func (app *Application) Run() error {
 	if err != nil {
 		return err
 	}
-	return app.Router.Run(app.Config.ServerAddress)
+	return app.Router.Run(app.Config.ListenAddr())
 }
 
 // Shutdown performs any necessary cleanup before the application exits

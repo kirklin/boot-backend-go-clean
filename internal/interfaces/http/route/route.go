@@ -13,8 +13,10 @@ import (
 // SetupRoutes configures the routes for the application
 func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppConfig) {
 
-	limiter := middleware.NewRateLimiter(200, time.Minute)
-	router.Use(limiter.LimitMiddleware())
+	if config.RateLimitPerMinute > 0 {
+		limiter := middleware.NewRateLimiter(config.RateLimitPerMinute, time.Minute)
+		router.Use(limiter.LimitMiddleware())
+	}
 
 	router.Use(middleware.CORSMiddleware())
 
