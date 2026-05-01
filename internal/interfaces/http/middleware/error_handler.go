@@ -24,8 +24,13 @@ func ErrorHandler() gin.HandlerFunc {
 			actualErr := ginErr.Err
 
 			// For simplicity, we just wrap it into our standard response format.
-			// You can expand this logic to check for specific domain errors and map to different status codes.
-			c.JSON(http.StatusInternalServerError, response.NewErrorResponse(actualErr.Error(), nil))
+			// In production, we hide the actual error message to prevent sensitive information leakage (like SQL errors).
+			errMessage := actualErr.Error()
+			if gin.Mode() == gin.ReleaseMode {
+				errMessage = "Internal Server Error"
+			}
+
+			c.JSON(http.StatusInternalServerError, response.NewErrorResponse(errMessage, nil))
 			c.Abort()
 		}
 	}

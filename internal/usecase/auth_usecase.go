@@ -3,27 +3,28 @@ package usecase
 import (
 	"context"
 	"errors"
-	"golang.org/x/crypto/bcrypt"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
-	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 )
 
 type authUseCase struct {
-	userRepo  repository.UserRepository
-	blacklist *auth.TokenBlacklist
-	config    *configs.AppConfig
+	userRepo      repository.UserRepository
+	authenticator gateway.Authenticator
+	config        *configs.AppConfig
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository, blacklist *auth.TokenBlacklist, config *configs.AppConfig) usecase.AuthUseCase {
+func NewAuthUseCase(userRepo repository.UserRepository, authenticator gateway.Authenticator, config *configs.AppConfig) usecase.AuthUseCase {
 	return &authUseCase{
-		userRepo:  userRepo,
-		blacklist: blacklist,
-		config:    config,
+		userRepo:      userRepo,
+		authenticator: authenticator,
+		config:        config,
 	}
 }
 
@@ -74,7 +75,7 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 	}
 
 	// Generate tokens
-	tokenPair, err := auth.GenerateTokenPair(user)
+	tokenPair, err := a.authenticator.GenerateTokenPair(user)
 	if err != nil {
 		return nil, err
 	}
@@ -88,12 +89,12 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 }
 
 func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error) {
-	if a.blacklist.IsTokenBlacklisted(req.RefreshToken) {
+	if a.authenticator.IsTokenBlacklisted(req.RefreshToken) {
 		return nil, errors.New("refresh token is blacklisted")
 	}
 
 	// Validate refresh token
-	refreshClaims, _, err := auth.ValidateRefreshToken(req.RefreshToken)
+	refreshClaims, _, err := a.authenticator.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +109,7 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	}
 
 	// Generate new token pair
-	tokenPair, err := auth.GenerateTokenPair(user)
+	tokenPair, err := a.authenticator.GenerateTokenPair(user)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func (a *authUseCase) Logout(ctx context.Context, req *entity.LogoutRequest) err
 		return ctx.Err() // 返回上下文的错误信息
 	default:
 		// 将刷新令牌添加到黑名单
-		a.blacklist.AddToken(req.RefreshToken, time.Duration(a.config.RefreshTokenLifetime)*time.Hour)
+		a.authenticator.BlacklistToken(req.RefreshToken, time.Duration(a.config.RefreshTokenLifetime)*time.Hour)
 	}
 
 	return nil

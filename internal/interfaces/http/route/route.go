@@ -1,11 +1,13 @@
 package route
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
-	"time"
 
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
@@ -29,9 +31,19 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 	// API routes
 	apiRouter := router.Group("/v1/api")
 
+	tokenBlacklist := auth.NewTokenBlacklist()
+	authenticator := auth.NewJWTAuthenticator(
+		config.AccessTokenSecret,
+		config.RefreshTokenSecret,
+		config.JWTIssuer,
+		time.Duration(config.AccessTokenLifetime)*time.Hour,
+		time.Duration(config.RefreshTokenLifetime)*time.Hour,
+		tokenBlacklist,
+	)
+
 	// Setup auth routes
-	NewAuthRouter(db, apiRouter, config)
+	NewAuthRouter(db, apiRouter, config, authenticator)
 
 	// Setup user routes
-	NewUserRouter(db, apiRouter, config)
+	NewUserRouter(db, apiRouter, config, authenticator)
 }

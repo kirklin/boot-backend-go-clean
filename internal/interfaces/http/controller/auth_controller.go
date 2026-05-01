@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
-	"net/http"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"

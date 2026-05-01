@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
-	"net/http"
 )
 
 // EnsureSelfMiddleware ensures that the current user can only operate on their own data

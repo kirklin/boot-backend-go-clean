@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 )
 

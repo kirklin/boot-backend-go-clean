@@ -11,8 +11,24 @@ type TokenBlacklist struct {
 }
 
 func NewTokenBlacklist() *TokenBlacklist {
-	return &TokenBlacklist{
+	tb := &TokenBlacklist{
 		blacklist: make(map[string]time.Time),
+	}
+	go tb.startCleanupRoutine()
+	return tb
+}
+
+func (b *TokenBlacklist) startCleanupRoutine() {
+	ticker := time.NewTicker(1 * time.Hour)
+	for range ticker.C {
+		b.mu.Lock()
+		now := time.Now()
+		for token, expiration := range b.blacklist {
+			if now.After(expiration) {
+				delete(b.blacklist, token)
+			}
+		}
+		b.mu.Unlock()
 	}
 }
 

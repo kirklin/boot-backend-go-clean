@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 
-	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
@@ -13,12 +13,12 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
-func NewUserRouter(db database.Database, group *gin.RouterGroup, config *configs.AppConfig) {
+func NewUserRouter(db database.Database, group *gin.RouterGroup, config *configs.AppConfig, authenticator gateway.Authenticator) {
 	ur := persistence.NewUserRepository(db)
 	uc := controller.NewUserController(usecase.NewUserUseCase(ur))
 
 	userRoutes := group.Group("/users")
-	userRoutes.Use(middleware.JWTAuthMiddleware(auth.NewJWTValidator()))
+	userRoutes.Use(middleware.JWTAuthMiddleware(authenticator))
 	{
 		userRoutes.GET("/:id", uc.GetUser)
 

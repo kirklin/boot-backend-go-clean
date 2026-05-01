@@ -7,11 +7,11 @@ import (
 )
 
 type User struct {
-	ID        int64        `json:"id,string"`
-	Username  string       `json:"username"`
-	Email     string       `json:"email"`
-	Password  string       `json:"-"`                    // 不在 JSON 中显示密码
-	AvatarURL *string      `json:"avatar_url,omitempty"` // 头像 URL（可选）
+	ID        int64      `json:"id,string"`
+	Username  string     `json:"username"`
+	Email     string     `json:"email"`
+	Password  string     `json:"-"`                    // 不在 JSON 中显示密码
+	AvatarURL *string    `json:"avatar_url,omitempty"` // 头像 URL（可选）
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty"` // 用于逻辑删除

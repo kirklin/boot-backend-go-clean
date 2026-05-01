@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
@@ -104,14 +103,6 @@ func (app *Application) Initialize() error {
 	if err := database.AutoMigrate(app.DB); err != nil {
 		logger.GetLogger().Fatalf("failed to auto migrate: %v", err)
 	}
-
-	// Initialize JWT
-	auth.InitJWT(app.Config.AccessTokenSecret,
-		app.Config.RefreshTokenSecret,
-		app.Config.JWTIssuer,
-		time.Duration(app.Config.AccessTokenLifetime)*time.Hour,
-		time.Duration(app.Config.RefreshTokenLifetime)*time.Hour,
-	)
 
 	// Set up routes
 	route.SetupRoutes(app.Router, app.DB, app.Config)
