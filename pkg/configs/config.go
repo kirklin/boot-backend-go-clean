@@ -12,18 +12,18 @@ import (
 // AppConfig holds all configuration for the application
 type AppConfig struct {
 	Environment    string `mapstructure:"APP_ENVIRONMENT"`
-	AppPort        int    `mapstructure:"APP_PORT"`
+	ServerPort     int    `mapstructure:"SERVER_PORT"`
 	RequestTimeout int    `mapstructure:"REQUEST_TIMEOUT_SECONDS"`
 	// Rate Limiting
 	RateLimitPerMinute int `mapstructure:"RATE_LIMIT_PER_MINUTE"` // 每 IP 每分钟最大请求数，0 = 不限流
 	// Database
-	DatabaseType     string `mapstructure:"DATABASE_TYPE"`
-	DatabaseHost     string `mapstructure:"DATABASE_HOST"`
-	DatabasePort     int    `mapstructure:"DATABASE_PORT"`
-	DatabaseUser     string `mapstructure:"DATABASE_USER"`
-	DatabasePassword string `mapstructure:"DATABASE_PASSWORD"`
-	DatabaseName     string `mapstructure:"DATABASE_NAME"`
-	DatabaseSSLMode  string `mapstructure:"DATABASE_SSL_MODE"`
+	DBType     string `mapstructure:"DB_TYPE"`
+	DBHost     string `mapstructure:"DB_HOST"`
+	DBPort     int    `mapstructure:"DB_PORT"`
+	DBUser     string `mapstructure:"DB_USER"`
+	DBPassword string `mapstructure:"DB_PASSWORD"`
+	DBName     string `mapstructure:"DB_NAME"`
+	DBSSLMode  string `mapstructure:"DB_SSL_MODE"`
 	// JWT
 	AccessTokenLifetime  int    `mapstructure:"ACCESS_TOKEN_LIFETIME_HOURS"`
 	RefreshTokenLifetime int    `mapstructure:"REFRESH_TOKEN_LIFETIME_HOURS"`
@@ -36,9 +36,9 @@ type AppConfig struct {
 	SnowflakeStepBits    int    `mapstructure:"SNOWFLAKE_STEP_BITS"`
 }
 
-// ListenAddr returns the address string for gin to listen on, e.g. ":8888"
-func (c *AppConfig) ListenAddr() string {
-	return fmt.Sprintf(":%d", c.AppPort)
+// ServerAddress returns the formatted server address
+func (c *AppConfig) ServerAddress() string {
+	return fmt.Sprintf(":%d", c.ServerPort)
 }
 
 // Validate checks that all required configuration fields are set.
@@ -59,15 +59,15 @@ func (c *AppConfig) Validate() error {
 
 	// ---- 应用基础 ----
 	requireStr(c.Environment, "APP_ENVIRONMENT")
-	requireInt(c.AppPort, "APP_PORT")
+	requireInt(c.ServerPort, "SERVER_PORT")
 
 	// ---- 数据库 ----
-	requireStr(c.DatabaseType, "DATABASE_TYPE")
-	requireStr(c.DatabaseHost, "DATABASE_HOST")
-	requireInt(c.DatabasePort, "DATABASE_PORT")
-	requireStr(c.DatabaseUser, "DATABASE_USER")
-	requireStr(c.DatabasePassword, "DATABASE_PASSWORD")
-	requireStr(c.DatabaseName, "DATABASE_NAME")
+	requireStr(c.DBType, "DB_TYPE")
+	requireStr(c.DBHost, "DB_HOST")
+	requireInt(c.DBPort, "DB_PORT")
+	requireStr(c.DBUser, "DB_USER")
+	requireStr(c.DBPassword, "DB_PASSWORD")
+	requireStr(c.DBName, "DB_NAME")
 
 	// ---- JWT ----
 	requireStr(c.AccessTokenSecret, "ACCESS_TOKEN_SECRET")

@@ -1,6 +1,6 @@
 server {
-    listen       ${APP_HOST_PORT};
-    listen  [::]:${APP_HOST_PORT};
+    listen       ${GATEWAY_PORT};
+    listen  [::]:${GATEWAY_PORT};
     server_name _;
 
     # Redirect all HTTP requests to HTTPS
@@ -9,7 +9,7 @@ server {
 
     # If no SSL, directly serve here
     location / {
-        proxy_pass http://web:${APP_PORT};
+        proxy_pass http://api:${SERVER_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

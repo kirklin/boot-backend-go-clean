@@ -38,13 +38,13 @@ func NewApplication() (*Application, error) {
 	// Redirect Gin's logs to our custom logger
 	gin.DefaultWriter = &ginLogWriter{logger: logger.GetLogger()}
 	router := gin.New()
-	
+
 	// Register RequestID as early as possible so it's included in logs
 	router.Use(middleware.RequestID())
-	
+
 	router.Use(gin.LoggerWithWriter(gin.DefaultWriter))
 	router.Use(gin.Recovery())
-	
+
 	// Add global ErrorHandler middleware to format any c.Error() calls
 	router.Use(middleware.ErrorHandler())
 
@@ -72,22 +72,22 @@ func (app *Application) Initialize() error {
 
 	// Initialize database
 	dbConfig := &database.Config{
-		Host:     app.Config.DatabaseHost,
-		Port:     app.Config.DatabasePort,
-		User:     app.Config.DatabaseUser,
-		Password: app.Config.DatabasePassword,
-		DBName:   app.Config.DatabaseName,
-		SSLMode:  app.Config.DatabaseSSLMode,
+		Host:     app.Config.DBHost,
+		Port:     app.Config.DBPort,
+		User:     app.Config.DBUser,
+		Password: app.Config.DBPassword,
+		DBName:   app.Config.DBName,
+		SSLMode:  app.Config.DBSSLMode,
 	}
 
 	var err error
-	switch app.Config.DatabaseType {
+	switch app.Config.DBType {
 	case "postgres":
 		app.DB = postgres.NewPostgresDB()
 	case "mysql":
 		app.DB = mysql.NewMySQLDB()
 	default:
-		logger.GetLogger().Fatalf("unsupported database type: %s", app.Config.DatabaseType)
+		logger.GetLogger().Fatalf("unsupported database type: %s", app.Config.DBType)
 	}
 
 	err = app.DB.Connect(dbConfig)
@@ -118,7 +118,7 @@ func (app *Application) Run() error {
 	if err != nil {
 		return err
 	}
-	return app.Router.Run(app.Config.ListenAddr())
+	return app.Router.Run(app.Config.ServerAddress())
 }
 
 // Shutdown performs any necessary cleanup before the application exits

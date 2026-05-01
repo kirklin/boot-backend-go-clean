@@ -44,7 +44,7 @@ func main() {
 		}
 	}()
 
-	log.Infof("Application is running on %s. Press CTRL+C to stop.", app.Config.ListenAddr())
+	log.Infof("Application is running on %s. Press CTRL+C to stop.", app.Config.ServerAddress())
 
 	// Wait for interrupt signal
 	<-stop

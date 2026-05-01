@@ -8,67 +8,54 @@
 # =============================================================================
 
 services:
-  web:
-    # ⚠️ Adjust the tag appropriately based on your registry
-    image: ghcr.io/kirklin/boot-backend-go-clean:latest
-    container_name: boot_app
-    env_file:
-      - .env
-    environment:
-      DATABASE_HOST: boot_db
-    volumes:
-      - ./.env:/app/.env:ro
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "5"
-    networks:
-      - app-network
-
-  ####################### DATABASE (PostgreSQL) #######################
-  # NOTE: If you use MySQL, replace this service with a mysql image
-  db:
+  ####################### DATABASE #######################
+  postgres:
     image: postgres:17-alpine
-    container_name: boot_db
     environment:
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secure_password_here}
-      POSTGRES_DB: ${DATABASE_NAME:-boot}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_here}
+      POSTGRES_DB: ${DB_NAME:-${COMPOSE_PROJECT_NAME:-app}_db}
       PGDATA: /data/postgres
     volumes:
       - db_data:/data/postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-boot}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-${COMPOSE_PROJECT_NAME:-app}_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+  ####################### BACKEND API #######################
+  api:
+    image: ${DOCKER_IMAGE:-ghcr.io/kirklin/boot-backend-go-clean}:${TAG:-latest}
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+    volumes:
+      - ./.env:/app/.env:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
 
   ####################### GATEWAY (Nginx) #######################
   gateway:
     image: nginx:alpine
-    container_name: boot_gateway
     environment:
-      - APP_PORT=${APP_PORT:-8888}
-      - APP_HOST_PORT=${APP_HOST_PORT:-8888}
+      - SERVER_PORT=${SERVER_PORT:-8888}
+      - GATEWAY_PORT=${GATEWAY_PORT:-8888}
     volumes:
       - ./docker/nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./docker/nginx/certs:/etc/nginx/certs:ro
     ports:
-      - "${APP_HOST_PORT:-8888}:${APP_HOST_PORT:-8888}"
+      - "${GATEWAY_PORT:-8888}:${GATEWAY_PORT:-8888}"
     restart: unless-stopped
+    depends_on:
+      - api
     networks:
       - app-network
 

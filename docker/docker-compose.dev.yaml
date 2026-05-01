@@ -9,71 +9,66 @@
 # =============================================================================
 
 services:
-  web:
+  ####################### DATABASE #######################
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_here}
+      POSTGRES_DB: ${DB_NAME:-${COMPOSE_PROJECT_NAME:-app}_db}
+      PGDATA: /data/postgres
+    ports:
+      - "127.0.0.1:${DB_EXPOSED_PORT:-5432}:${DB_PORT:-5432}"
+    volumes:
+      - postgres_data:/data/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-${COMPOSE_PROJECT_NAME:-app}_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  ####################### BACKEND API #######################
+  api:
     build:
       context: .
       dockerfile: docker/Dockerfile.dev
-    container_name: boot_app_dev
-    env_file:
-      - .env
     environment:
-      DATABASE_HOST: boot_postgres
+      - APP_ENVIRONMENT=${APP_ENVIRONMENT:-development}
+      - SERVER_PORT=${SERVER_PORT:-8888}
+      - DB_TYPE=${DB_TYPE:-postgres}
+      - DB_HOST=postgres
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password_here}
+      - DB_NAME=${DB_NAME:-${COMPOSE_PROJECT_NAME:-app}_db}
+      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
     volumes:
-      # 挂载源代码，实现热重载
       - .:/app
-      # 使用匿名卷保存 Go 模块缓存，避免每次重建
       - go-modules:/go/pkg/mod
       # 使用匿名卷保存 tmp 目录（air 编译产物），不同步到宿主机
       - /app/tmp
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${APP_PORT:-8888}/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  ####################### POSTGRES #######################
-  postgres:
-    image: postgres:17-alpine
-    container_name: boot_postgres
-    environment:
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-password}
-      POSTGRES_DB: ${DATABASE_NAME:-myapp}
-      PGDATA: /data/postgres
-    ports:
-      - "127.0.0.1:${DATABASE_HOST_PORT:-5432}:${DATABASE_PORT:-5432}"
-    volumes:
-      - postgres_data:/data/postgres
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-myapp}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
       - app-network
 
   ####################### GATEWAY (Nginx) #######################
   gateway:
     image: nginx:alpine
-    container_name: boot_gateway_dev
     environment:
-      - APP_PORT=${APP_PORT:-8888}
-      - APP_HOST_PORT=${APP_HOST_PORT:-8888}
+      - SERVER_PORT=${SERVER_PORT:-8888}
+      - GATEWAY_PORT=${GATEWAY_PORT:-8888}
     volumes:
       - ./docker/nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./docker/nginx/certs:/etc/nginx/certs:ro
     ports:
-      # Nginx Gateway now listens on APP_HOST_PORT
-      - "127.0.0.1:${APP_HOST_PORT:-8888}:${APP_HOST_PORT:-8888}"
+      # Nginx Gateway now listens on GATEWAY_PORT
+      - "127.0.0.1:${GATEWAY_PORT:-8888}:${GATEWAY_PORT:-8888}"
     depends_on:
-      - web
+      - api
     restart: unless-stopped
     networks:
       - app-network
