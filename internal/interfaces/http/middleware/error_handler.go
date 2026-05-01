@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 )
 
@@ -23,8 +25,16 @@ func ErrorHandler() gin.HandlerFunc {
 			ginErr := c.Errors.Last()
 			actualErr := ginErr.Err
 
-			// For simplicity, we just wrap it into our standard response format.
-			// In production, we hide the actual error message to prevent sensitive information leakage (like SQL errors).
+			// If it's an AppError, use the structured code, message, and HTTP status.
+			var appErr *domainerrors.AppError
+			if errors.As(actualErr, &appErr) {
+				c.JSON(appErr.HTTPCode, response.NewErrorResponse(appErr.Message, appErr))
+				c.Abort()
+				return
+			}
+
+			// For unknown errors, hide details in production to prevent
+			// leaking internal information (e.g. SQL errors, stack traces).
 			errMessage := actualErr.Error()
 			if gin.Mode() == gin.ReleaseMode {
 				errMessage = "Internal Server Error"
@@ -35,3 +45,4 @@ func ErrorHandler() gin.HandlerFunc {
 		}
 	}
 }
+

@@ -7,6 +7,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
@@ -31,17 +33,17 @@ func NewAuthUseCase(userRepo repository.UserRepository, authenticator gateway.Au
 func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest) (*entity.RegisterResponse, error) {
 	// Check if user already exists
 	existingUser, err := a.userRepo.FindByUsername(ctx, req.Username)
-	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
-		return nil, err
+	if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 	if existingUser != nil {
-		return nil, errors.New("username already exists")
+		return nil, domainerrors.ErrUsernameExists
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	// Create new user
@@ -53,7 +55,7 @@ func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest)
 
 	err = a.userRepo.Create(ctx, newUser)
 	if err != nil {
-		return nil, err
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return &entity.RegisterResponse{User: *newUser}, nil
@@ -62,22 +64,22 @@ func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest)
 func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*entity.LoginResponse, error) {
 	user, err := a.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			return nil, repository.ErrUserNotFound
+		if errors.Is(err, domainerrors.ErrUserNotFound) {
+			return nil, domainerrors.ErrInvalidCredentials
 		}
-		return nil, err
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	// Check password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		return nil, errors.New("invalid password")
+		return nil, domainerrors.ErrInvalidCredentials
 	}
 
 	// Generate tokens
 	tokenPair, err := a.authenticator.GenerateTokenPair(user)
 	if err != nil {
-		return nil, err
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return &entity.LoginResponse{
@@ -90,28 +92,28 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 
 func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error) {
 	if a.authenticator.IsTokenBlacklisted(req.RefreshToken) {
-		return nil, errors.New("refresh token is blacklisted")
+		return nil, domainerrors.ErrTokenBlacklisted
 	}
 
 	// Validate refresh token
 	refreshClaims, _, err := a.authenticator.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
-		return nil, err
+		return nil, domainerrors.ErrTokenInvalid.Wrap(err)
 	}
 
 	// Get user
 	user, err := a.userRepo.FindByID(ctx, refreshClaims.UserID)
 	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			return nil, repository.ErrUserNotFound
+		if errors.Is(err, domainerrors.ErrUserNotFound) {
+			return nil, domainerrors.ErrUserNotFound
 		}
-		return nil, err
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	// Generate new token pair
 	tokenPair, err := a.authenticator.GenerateTokenPair(user)
 	if err != nil {
-		return nil, err
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return &entity.RefreshTokenResponse{
@@ -133,3 +135,4 @@ func (a *authUseCase) Logout(ctx context.Context, req *entity.LogoutRequest) err
 
 	return nil
 }
+

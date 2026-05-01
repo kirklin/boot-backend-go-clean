@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 )
 
 // EnsureSelfMiddleware ensures that the current user can only operate on their own data
@@ -29,7 +29,7 @@ func EnsureSelfMiddleware(getTargetUserId func(c *gin.Context) (int64, error)) g
 
 		// 验证是否是本人
 		if authenticatedUserID != targetUserID {
-			c.JSON(http.StatusForbidden, response.NewErrorResponse(repository.ErrPermissionDenied.Error(), nil))
+			c.JSON(http.StatusForbidden, response.NewErrorResponse(domainerrors.ErrPermissionDenied.Message, domainerrors.ErrPermissionDenied))
 			c.Abort()
 			return
 		}
@@ -38,3 +38,4 @@ func EnsureSelfMiddleware(getTargetUserId func(c *gin.Context) (int64, error)) g
 		c.Next()
 	}
 }
+

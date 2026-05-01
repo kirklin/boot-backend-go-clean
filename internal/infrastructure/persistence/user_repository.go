@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence/model"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
@@ -66,7 +67,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return repository.ErrNoRowsAffected
+		return domainerrors.ErrNoRowsAffected
 	}
 	return nil
 }
@@ -78,7 +79,7 @@ func (r *userRepository) SoftDelete(ctx context.Context, id int64) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return repository.ErrNoRowsAffected
+		return domainerrors.ErrNoRowsAffected
 	}
 	return nil
 }
@@ -86,9 +87,10 @@ func (r *userRepository) SoftDelete(ctx context.Context, id int64) error {
 func (r *userRepository) handleQueryResult(dto *model.UserDTO, err error) (*entity.User, error) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, repository.ErrUserNotFound
+			return nil, domainerrors.ErrUserNotFound
 		}
 		return nil, err
 	}
 	return dto.ConvertToEntity(), nil
 }
+

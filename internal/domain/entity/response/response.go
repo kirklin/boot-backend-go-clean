@@ -2,6 +2,9 @@ package response
 
 import (
 	"encoding/json"
+	"errors"
+
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 )
 
 // ResStatus represents the status of the response
@@ -96,15 +99,24 @@ func NewPageResponseWithExtra[T any](message string, list []T, current, pageSize
 	}
 }
 
-// NewErrorResponse creates a new error response
+// NewErrorResponse creates a new error response.
+// If err is an *AppError, it extracts the code and user-safe message automatically.
+// Otherwise, it falls back to a generic "INTERNAL_ERROR" code.
 func NewErrorResponse(message string, err error) Response[any] {
 	errorDetails := &ErrorDetails{
+		Code:    "INTERNAL_ERROR",
 		Message: message,
 	}
 
-	if err != nil {
-		errorDetails.Code = "INTERNAL_ERROR"
-		errorDetails.Message = err.Error()
+	var appErr *domainerrors.AppError
+	if errors.As(err, &appErr) {
+		errorDetails.Code = appErr.Code
+		errorDetails.Message = appErr.Message
+	} else if err != nil {
+		// For non-AppError errors, use the caller-provided message.
+		// The raw err.Error() is intentionally NOT exposed to prevent
+		// leaking internal details (e.g. SQL errors) to the client.
+		errorDetails.Message = message
 	}
 
 	return Response[any]{
@@ -114,7 +126,19 @@ func NewErrorResponse(message string, err error) Response[any] {
 	}
 }
 
+// HTTPCodeFromError extracts the HTTP status code from an error.
+// If the error is an *AppError, it returns the AppError's HTTPCode.
+// Otherwise, it returns the provided fallback status code.
+func HTTPCodeFromError(err error, fallback int) int {
+	var appErr *domainerrors.AppError
+	if errors.As(err, &appErr) {
+		return appErr.HTTPCode
+	}
+	return fallback
+}
+
 // JSON converts the response to JSON bytes
 func (r Response[T]) JSON() ([]byte, error) {
 	return json.Marshal(r)
 }
+

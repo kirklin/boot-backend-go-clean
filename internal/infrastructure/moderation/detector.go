@@ -3,6 +3,7 @@ package moderation
 import (
 	"sync"
 
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
 	"github.com/kirklin/go-swd/pkg/core"
@@ -47,7 +48,7 @@ func (d *LocalModerationDetector) DetectSensitiveWords(text string) bool {
 // 本地内容审核器不支持图片检测，返回错误
 func (d *LocalModerationDetector) DetectSensitiveImage(imageURL string) (bool, error) {
 	// 本地内容审核器不支持图片检测，返回错误
-	return false, usecase.ErrLocalImageModeration
+	return false, domainerrors.ErrLocalImageModeration
 }
 
 // GetSensitiveWords 获取文本中的所有敏感词

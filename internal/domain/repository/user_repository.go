@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 )
@@ -16,9 +15,3 @@ type UserRepository interface {
 	SoftDelete(ctx context.Context, id int64) error
 }
 
-var (
-	ErrUserNotFound = errors.New("user not found")
-
-	// ErrPermissionDenied 表示用户试图执行无权访问的操作或操作属于其他用户的数据。
-	ErrPermissionDenied = errors.New("permission denied for this operation")
-)
