@@ -1,0 +1,61 @@
+# =============================================================================
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+# =============================================================================
+
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  enable:
+    # ── Bug Detection ──────────────────────────────────────────────────
+    - bodyclose        # Detect unclosed HTTP response bodies
+    - noctx            # Detect HTTP requests sent without context.Context
+    - sqlclosecheck    # Detect unclosed sql.Rows / sql.Stmt
+
+    # ── Style & Readability ────────────────────────────────────────────
+    - misspell         # Detect commonly misspelled English words
+    - whitespace       # Detect unnecessary leading/trailing newlines
+
+    # ── Performance ────────────────────────────────────────────────────
+    - prealloc         # Suggest preallocating slices when size is known
+
+  settings:
+    misspell:
+      locale: US
+
+linters-settings:
+  revive:
+    rules:
+      # Allow stuttering in exported names (e.g. errors.ErrNotFound)
+      - name: exported
+        arguments:
+          - disableStutteringCheck
+
+issues:
+  # Show all issues, don't cap per-linter
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Test files can have longer functions and more magic numbers
+    - path: _test\.go
+      linters:
+        - bodyclose
+        - noctx
+
+    # Allow dot imports in test files (testify, gomock, etc.)
+    - path: _test\.go
+      text: "dot-imports"
+
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/kirklin/boot-backend-go-clean
