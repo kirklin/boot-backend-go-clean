@@ -5,8 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 )
 
 // ErrorHandler is a global middleware that catches uncaught errors from c.Error() and formats them
@@ -45,4 +46,3 @@ func ErrorHandler() gin.HandlerFunc {
 		}
 	}
 }
-

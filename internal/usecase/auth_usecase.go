@@ -135,4 +135,3 @@ func (a *authUseCase) Logout(ctx context.Context, req *entity.LogoutRequest) err
 
 	return nil
 }
-

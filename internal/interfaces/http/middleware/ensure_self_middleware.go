@@ -4,8 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
+	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 )
 
 // EnsureSelfMiddleware ensures that the current user can only operate on their own data
@@ -38,4 +39,3 @@ func EnsureSelfMiddleware(getTargetUserId func(c *gin.Context) (int64, error)) g
 		c.Next()
 	}
 }
-

@@ -93,4 +93,3 @@ func (r *userRepository) handleQueryResult(dto *model.UserDTO, err error) (*enti
 	}
 	return dto.ConvertToEntity(), nil
 }
-

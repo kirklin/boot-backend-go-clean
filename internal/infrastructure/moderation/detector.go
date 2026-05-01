@@ -3,11 +3,12 @@ package moderation
 import (
 	"sync"
 
+	"github.com/kirklin/go-swd/pkg/core"
+	"github.com/kirklin/go-swd/pkg/swd"
+
 	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
-	"github.com/kirklin/go-swd/pkg/core"
-	"github.com/kirklin/go-swd/pkg/swd"
 )
 
 // LocalModerationDetector 本地内容审核实现

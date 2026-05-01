@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
@@ -83,4 +84,3 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("Logged out successfully", nil))
 }
-

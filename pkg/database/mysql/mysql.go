@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
 type MySQLDB struct {

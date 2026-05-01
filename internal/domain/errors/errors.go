@@ -139,4 +139,3 @@ var (
 var (
 	ErrLocalImageModeration = &AppError{Code: "IMAGE_MODERATION_UNSUPPORTED", Message: "Local environment does not support image content moderation", HTTPCode: http.StatusNotImplemented}
 )
-

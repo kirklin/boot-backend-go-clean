@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
@@ -14,7 +15,6 @@ import (
 
 // SetupRoutes configures the routes for the application
 func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppConfig) {
-
 	if config.RateLimitPerMinute > 0 {
 		limiter := middleware.NewRateLimiter(config.RateLimitPerMinute, time.Minute)
 		router.Use(limiter.LimitMiddleware())

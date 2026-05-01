@@ -27,10 +27,9 @@ func Print(w io.Writer, environment string) {
 
 	b.WriteString(colorize("\033[36m", logo, isProd))
 
-	b.WriteString(fmt.Sprintf("  %s    %s\n",
+	fmt.Fprintf(&b, "  %s    %s\n",
 		colorize("\033[90m", ":: Boot Backend Go Clean ::", isProd),
-		colorize("\033[32m", fmt.Sprintf("(v%s)", version.Version), isProd),
-	))
+		colorize("\033[32m", fmt.Sprintf("(v%s)", version.Version), isProd))
 	b.WriteString("\n")
 
 	rows := []struct{ label, value string }{
@@ -44,11 +43,11 @@ func Print(w io.Writer, environment string) {
 	}
 
 	for _, r := range rows {
-		b.WriteString(fmt.Sprintf("  %-14s %s\n", r.label+":", r.value))
+		fmt.Fprintf(&b, "  %-14s %s\n", r.label+":", r.value)
 	}
 	b.WriteString("\n")
 
-	fmt.Fprint(w, b.String())
+	_, _ = fmt.Fprint(w, b.String())
 }
 
 // colorize wraps text with an ANSI color code. In production mode, returns plain text.

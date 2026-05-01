@@ -3,8 +3,9 @@ package model
 import (
 	"time"
 
-	"github.com/kirklin/boot-backend-go-clean/pkg/utils/snowflake"
 	"gorm.io/gorm"
+
+	"github.com/kirklin/boot-backend-go-clean/pkg/utils/snowflake"
 )
 
 type BaseModel struct {

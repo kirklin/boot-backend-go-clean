@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -18,7 +19,7 @@ func main() {
 	timestamp := time.Now().Unix()
 	fileName := fmt.Sprintf("%d_%s", timestamp, migrationName)
 
-	cmd := exec.Command("migrate", "create", "-ext", "sql", "-dir", "migrations", "-seq", fileName)
+	cmd := exec.CommandContext(context.Background(), "migrate", "create", "-ext", "sql", "-dir", "migrations", "-seq", fileName)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

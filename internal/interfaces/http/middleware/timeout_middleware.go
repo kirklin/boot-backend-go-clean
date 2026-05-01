@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-contrib/timeout"
 	"github.com/gin-gonic/gin"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 )
 

@@ -9,4 +9,3 @@ type ModerationUseCase interface {
 	// 参数为图片URL，如果不支持图片检测，应该返回错误
 	DetectSensitiveImage(imageURL string) (bool, error)
 }
-

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
@@ -118,8 +119,8 @@ func (app *Application) Initialize() error {
 // to complete during graceful shutdown.
 const shutdownGracePeriod = 30 * time.Second
 
-// Run starts the HTTP server and blocks until ctx is cancelled.
-// When the parent context is cancelled (e.g. via signal.NotifyContext),
+// Run starts the HTTP server and blocks until ctx is canceled.
+// When the parent context is canceled (e.g. via signal.NotifyContext),
 // it automatically performs graceful shutdown: stops accepting new connections,
 // waits for in-flight requests to drain, and closes the database.
 //

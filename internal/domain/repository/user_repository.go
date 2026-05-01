@@ -14,4 +14,3 @@ type UserRepository interface {
 	Update(ctx context.Context, user *entity.User) error
 	SoftDelete(ctx context.Context, id int64) error
 }
-

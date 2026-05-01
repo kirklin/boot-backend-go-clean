@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
@@ -82,4 +83,3 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("User deleted successfully", nil))
 }
-

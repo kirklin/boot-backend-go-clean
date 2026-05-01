@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	config := logger.NewDefaultConfig()
 
 	if config.FileConfig.Environment == "" {
@@ -38,21 +37,19 @@ func main() {
 		log.Fatalf("Failed to initialize application: %v", err)
 	}
 
-	// Create a context that is cancelled on SIGINT or SIGTERM.
+	// Create a context that is canceled on SIGINT or SIGTERM.
 	// When a signal is received, ctx.Done() fires and app.Run
 	// automatically drains in-flight requests and shuts down cleanly.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Run blocks until the context is cancelled, then performs graceful shutdown.
+	// Run blocks until the context is canceled, then performs graceful shutdown.
 	if err := app.Run(ctx); err != nil {
 		log.Fatalf("Application error: %v", err)
 	}
 
-	if err := log.Sync(); err != nil {
-		// Ignore sync errors on stdout/stderr — these are not real files
-		// and produce "inappropriate ioctl for device" on macOS.
-		// This is a known Zap issue: https://github.com/uber-go/zap/issues/991
-	}
+	// Ignore sync errors on stdout/stderr — these are not real files
+	// and produce "inappropriate ioctl for device" on macOS.
+	// This is a known Zap issue: https://github.com/uber-go/zap/issues/991
+	_ = log.Sync()
 }
-

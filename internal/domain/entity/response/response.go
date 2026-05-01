@@ -141,4 +141,3 @@ func HTTPCodeFromError(err error, fallback int) int {
 func (r Response[T]) JSON() ([]byte, error) {
 	return json.Marshal(r)
 }
-

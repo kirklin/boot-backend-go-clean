@@ -16,11 +16,11 @@ type AppConfig struct {
 	// Rate Limiting
 	RateLimitPerMinute int `mapstructure:"RATE_LIMIT_PER_MINUTE"` // 每 IP 每分钟最大请求数，0 = 不限流
 	// Database
-	DBType     string `mapstructure:"DB_TYPE"`
-	DBHost     string `mapstructure:"DB_HOST"`
-	DBPort     int    `mapstructure:"DB_PORT"`
-	DBUser     string `mapstructure:"DB_USER"`
-	DBPassword string `mapstructure:"DB_PASSWORD"`
+	DBType                   string `mapstructure:"DB_TYPE"`
+	DBHost                   string `mapstructure:"DB_HOST"`
+	DBPort                   int    `mapstructure:"DB_PORT"`
+	DBUser                   string `mapstructure:"DB_USER"`
+	DBPassword               string `mapstructure:"DB_PASSWORD"`
 	DBName                   string `mapstructure:"DB_NAME"`
 	DBSSLMode                string `mapstructure:"DB_SSL_MODE"`
 	DBMaxIdleConns           int    `mapstructure:"DB_MAX_IDLE_CONNS"`
@@ -94,9 +94,8 @@ func LoadConfig() (*AppConfig, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv() // Allow true environment variables (e.g., from Docker) to override .env configs
 
-	if err := viper.ReadInConfig(); err != nil {
-		// Ignore error if .env doesn't exist, as we might rely entirely on env vars
-	}
+	// Ignore error if .env doesn't exist, as we might rely entirely on env vars
+	_ = viper.ReadInConfig()
 
 	if err := viper.Unmarshal(config); err != nil {
 		return nil, fmt.Errorf("failed to parse configuration: %w", err)
