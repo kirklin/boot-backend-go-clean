@@ -28,7 +28,7 @@ func (dto *UserDTO) ConvertToEntity() *entity.User {
 		AvatarURL: dto.AvatarURL,
 		CreatedAt: dto.CreatedAt,
 		UpdatedAt: dto.UpdatedAt,
-		DeletedAt: timeutil.ToSqlNullTime(dto.DeletedAt),
+		DeletedAt: timeutil.ToTimePointer(dto.DeletedAt),
 	}
 }
 

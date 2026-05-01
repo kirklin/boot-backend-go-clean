@@ -1,29 +1,26 @@
 package timeutil
 
 import (
-	"database/sql"
+	"time"
 
 	"gorm.io/gorm"
 )
 
-// ToGormDeletedAt 将 sql.NullTime 转换为 gorm.DeletedAt
-func ToGormDeletedAt(t sql.NullTime) gorm.DeletedAt {
-	if !t.Valid {
+// ToGormDeletedAt 将 *time.Time 转换为 gorm.DeletedAt
+func ToGormDeletedAt(t *time.Time) gorm.DeletedAt {
+	if t == nil {
 		return gorm.DeletedAt{}
 	}
 	return gorm.DeletedAt{
-		Time:  t.Time,
+		Time:  *t,
 		Valid: true,
 	}
 }
 
-// ToSqlNullTime 将 gorm.DeletedAt 转换为 sql.NullTime
-func ToSqlNullTime(t gorm.DeletedAt) sql.NullTime {
+// ToTimePointer 将 gorm.DeletedAt 转换为 *time.Time
+func ToTimePointer(t gorm.DeletedAt) *time.Time {
 	if !t.Valid {
-		return sql.NullTime{}
+		return nil
 	}
-	return sql.NullTime{
-		Time:  t.Time,
-		Valid: true,
-	}
+	return &t.Time
 }
