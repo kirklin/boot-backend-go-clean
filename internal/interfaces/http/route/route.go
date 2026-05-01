@@ -22,14 +22,20 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 
 	router.Use(middleware.CORSMiddleware())
 
-	// Public routes
-	publicRouter := router.Group("")
-	publicRouter.GET("/health", func(c *gin.Context) {
-		c.JSON(200, response.NewSuccessResponse[any]("success", nil))
+	// Root route
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, response.NewSuccessResponse("Boot Backend Go Clean is running", gin.H{
+			"version": "1.0.0",
+		}))
 	})
 
 	// API routes
 	apiRouter := router.Group("/v1/api")
+
+	// Health check under API group
+	apiRouter.GET("/health", func(c *gin.Context) {
+		c.JSON(200, response.NewSuccessResponse[any]("success", nil))
+	})
 
 	tokenBlacklist := auth.NewTokenBlacklist()
 	authenticator := auth.NewJWTAuthenticator(

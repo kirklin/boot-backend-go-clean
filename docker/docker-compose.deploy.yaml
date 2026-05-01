@@ -36,6 +36,12 @@ services:
       DB_HOST: postgres
     volumes:
       - ./.env:/app/.env:ro
+    healthcheck:
+      test: ["/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,7 +61,8 @@ services:
       - "${GATEWAY_PORT:-8888}:${GATEWAY_PORT:-8888}"
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - app-network
 

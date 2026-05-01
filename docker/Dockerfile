@@ -29,6 +29,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
     -ldflags="-s -w -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -extldflags '-static'" \
     -o main ./cmd/main.go
 
+# Build lightweight health check binary for Docker HEALTHCHECK
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags="-s -w -extldflags '-static'" \
+    -o healthcheck ./cmd/healthcheck/main.go
+
 # ---- Stage 2: Runtime (Distroless) ----
 # We use the static-debian12 distroless image to ensure zero attack surface.
 # It has no shell, no package manager, making it incredibly secure.
@@ -36,6 +41,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 
 # Copy the compiled binary from the builder
 COPY --from=builder /app/main /main
+COPY --from=builder /app/healthcheck /healthcheck
 
 # The application port is defined via environment variables
 # EXPOSE 8888
