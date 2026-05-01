@@ -39,7 +39,9 @@ func (b *TokenBlacklist) AddToken(token string, duration time.Duration) {
 	b.blacklist[token] = time.Now().Add(duration)
 }
 
-// IsTokenBlacklisted checks if a token is in the blacklist
+// IsTokenBlacklisted checks if a token is in the blacklist.
+// Expired tokens are treated as not-blacklisted; actual cleanup is
+// handled by the background goroutine to avoid write operations under RLock.
 func (b *TokenBlacklist) IsTokenBlacklisted(token string) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -47,10 +49,7 @@ func (b *TokenBlacklist) IsTokenBlacklisted(token string) bool {
 	if !exists {
 		return false
 	}
-	// Remove expired tokens
-	if time.Now().After(expiration) {
-		delete(b.blacklist, token)
-		return false
-	}
-	return true
+	// Expired tokens are logically not blacklisted.
+	// They will be physically removed by startCleanupRoutine.
+	return !time.Now().After(expiration)
 }
