@@ -6,8 +6,8 @@ import (
 	"syscall"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/app/server"
+	"github.com/kirklin/boot-backend-go-clean/pkg/banner"
 	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
-	"github.com/kirklin/boot-backend-go-clean/pkg/version"
 )
 
 func main() {
@@ -23,8 +23,8 @@ func main() {
 	}
 	log := logger.GetLogger()
 
-	log.Infof("Boot Backend Go Clean — version=%s commit=%s built=%s",
-		version.Version, version.GitCommit, version.BuildTime)
+	// Print startup banner (Spring Boot style)
+	banner.Print(os.Stdout, config.FileConfig.Environment)
 
 	// Create a new application instance
 	app, err := server.NewApplication()

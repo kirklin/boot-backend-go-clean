@@ -24,11 +24,15 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 
 	// Root route
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, response.NewSuccessResponse("Boot Backend Go Clean is running", gin.H{
-			"version":    version.Version,
-			"git_commit": version.GitCommit,
-			"build_time": version.BuildTime,
-		}))
+		data := gin.H{
+			"version": version.Version,
+		}
+		// Only expose build details in non-production environments
+		if config.Environment != "production" {
+			data["git_commit"] = version.GitCommit
+			data["build_time"] = version.BuildTime
+		}
+		c.JSON(200, response.NewSuccessResponse("Boot Backend Go Clean is running", data))
 	})
 
 	// API routes
