@@ -11,7 +11,7 @@
 services:
   ####################### DATABASE #######################
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_here}
