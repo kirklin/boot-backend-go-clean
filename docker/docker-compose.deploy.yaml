@@ -10,7 +10,7 @@
 services:
   ####################### DATABASE #######################
   postgres:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_here}
@@ -44,7 +44,7 @@ services:
 
   ####################### GATEWAY (Nginx) #######################
   gateway:
-    image: nginx:alpine
+    image: nginx:mainline-alpine
     environment:
       - SERVER_PORT=${SERVER_PORT:-8888}
       - GATEWAY_PORT=${GATEWAY_PORT:-8888}
