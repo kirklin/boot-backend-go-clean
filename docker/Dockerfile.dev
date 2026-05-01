@@ -1,0 +1,23 @@
+# =============================================================================
+# Boot Backend Go Clean — 本地开发 (Hot-Reload)
+# =============================================================================
+
+FROM golang:1.26-alpine
+
+# 安装 air (Go 热重载工具)
+RUN go install github.com/air-verse/air@latest
+
+# 安装调试和开发常用工具
+RUN apk --no-cache add ca-certificates tzdata curl
+
+WORKDIR /app
+
+# 先复制依赖文件，利用 Docker 缓存
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 源代码通过 volume 挂载，不 COPY
+# 这样修改代码后 air 能立即检测到变化
+
+# air 使用项目根目录的 .air.toml 配置
+CMD ["air", "-c", ".air.toml"]
