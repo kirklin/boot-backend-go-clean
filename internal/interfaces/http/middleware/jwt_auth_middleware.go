@@ -1,16 +1,21 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"net/http"
 	"strings"
 
-	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 )
 
+// TokenValidator defines the interface for validating access tokens
+type TokenValidator interface {
+	ValidateAccessToken(tokenString string) (*entity.AccessTokenClaims, *entity.StandardClaims, error)
+}
+
 // JWTAuthMiddleware checks for a valid JWT token in the Authorization header
-func JWTAuthMiddleware() gin.HandlerFunc {
+func JWTAuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -28,8 +33,8 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		tokenString := bearerToken[1]
 
-		// Validate the access token
-		claims, _, err := auth.ValidateAccessToken(tokenString)
+		// Validate the access token using the injected validator
+		claims, _, err := validator.ValidateAccessToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, response.NewErrorResponse("Invalid or expired token", err))
 			c.Abort()

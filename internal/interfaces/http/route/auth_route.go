@@ -21,5 +21,5 @@ func NewAuthRouter(db database.Database, group *gin.RouterGroup, config *configs
 	authGroup.POST("/register", ac.Register)
 	authGroup.POST("/login", ac.Login)
 	authGroup.POST("/refresh", ac.RefreshToken)
-	authGroup.POST("/logout", middleware.JWTAuthMiddleware(), ac.Logout)
+	authGroup.POST("/logout", middleware.JWTAuthMiddleware(auth.NewJWTValidator()), ac.Logout)
 }

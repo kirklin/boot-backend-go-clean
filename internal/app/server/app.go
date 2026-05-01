@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
@@ -37,11 +38,18 @@ func NewApplication() (*Application, error) {
 	// Redirect Gin's logs to our custom logger
 	gin.DefaultWriter = &ginLogWriter{logger: logger.GetLogger()}
 	router := gin.New()
+	
+	// Register RequestID as early as possible so it's included in logs
+	router.Use(middleware.RequestID())
+	
 	router.Use(gin.LoggerWithWriter(gin.DefaultWriter))
 	router.Use(gin.Recovery())
+	
+	// Add global ErrorHandler middleware to format any c.Error() calls
+	router.Use(middleware.ErrorHandler())
 
 	// Add timeout middleware
-	//router.Use(middleware.TimeoutMiddleware(time.Duration(config.RequestTimeout) * time.Second))
+	router.Use(middleware.TimeoutMiddleware(time.Duration(config.RequestTimeout) * time.Second))
 
 	app := &Application{
 		Config: config,
