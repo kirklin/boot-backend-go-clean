@@ -20,6 +20,24 @@ type slogLogger struct {
 	writers []io.Writer
 }
 
+// convertToSlogLevel converts LogLevel to slog.Level
+func convertToSlogLevel(level LogLevel) slog.Level {
+	switch level {
+	case DebugLevel:
+		return slog.LevelDebug
+	case InfoLevel:
+		return slog.LevelInfo
+	case WarnLevel:
+		return slog.LevelWarn
+	case ErrorLevel:
+		return slog.LevelError
+	case FatalLevel, PanicLevel:
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
 func NewSlogLogger(config *LoggerConfig) (Logger, error) {
 	var writers []io.Writer
 

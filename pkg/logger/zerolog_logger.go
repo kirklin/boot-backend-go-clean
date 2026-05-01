@@ -19,6 +19,26 @@ type zerologLogger struct {
 	writers []io.Writer
 }
 
+// convertToZerologLevel converts LogLevel to zerolog.Level
+func convertToZerologLevel(level LogLevel) zerolog.Level {
+	switch level {
+	case DebugLevel:
+		return zerolog.DebugLevel
+	case InfoLevel:
+		return zerolog.InfoLevel
+	case WarnLevel:
+		return zerolog.WarnLevel
+	case ErrorLevel:
+		return zerolog.ErrorLevel
+	case FatalLevel:
+		return zerolog.FatalLevel
+	case PanicLevel:
+		return zerolog.PanicLevel
+	default:
+		return zerolog.InfoLevel
+	}
+}
+
 func NewZerologLogger(config *LoggerConfig) (Logger, error) {
 	var writers []io.Writer
 

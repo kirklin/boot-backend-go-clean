@@ -59,7 +59,9 @@ func main() {
 	app.Shutdown()
 
 	if err := logger.GetLogger().Sync(); err != nil {
-		log.Errorf("Failed to sync logger: %v", err)
+		// Ignore sync errors on stdout/stderr — these are not real files
+		// and produce "inappropriate ioctl for device" on macOS.
+		// This is a known Zap issue: https://github.com/uber-go/zap/issues/991
 	}
 
 	log.Info("Application stopped")

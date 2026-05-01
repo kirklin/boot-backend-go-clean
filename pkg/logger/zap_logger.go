@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -19,10 +18,24 @@ type zapLogger struct {
 	level  zap.AtomicLevel
 }
 
-var fieldPool = sync.Pool{
-	New: func() interface{} {
-		return make([]zap.Field, 0, 5)
-	},
+// convertToZapLevel converts LogLevel to zapcore.Level
+func convertToZapLevel(level LogLevel) zapcore.Level {
+	switch level {
+	case DebugLevel:
+		return zapcore.DebugLevel
+	case InfoLevel:
+		return zapcore.InfoLevel
+	case WarnLevel:
+		return zapcore.WarnLevel
+	case ErrorLevel:
+		return zapcore.ErrorLevel
+	case FatalLevel:
+		return zapcore.FatalLevel
+	case PanicLevel:
+		return zapcore.PanicLevel
+	default:
+		return zapcore.InfoLevel
+	}
 }
 
 func NewZapLogger(config *LoggerConfig) (Logger, error) {
@@ -257,13 +270,9 @@ func (l *zapLogger) WithError(err error) Logger {
 }
 
 func fieldsToZapFields(fields Fields) []zap.Field {
-	zapFields := fieldPool.Get().([]zap.Field)
+	zapFields := make([]zap.Field, 0, len(fields))
 	for k, v := range fields {
 		zapFields = append(zapFields, zap.Any(k, v))
 	}
-	defer func() {
-		zapFields = zapFields[:0]
-		fieldPool.Put(zapFields)
-	}()
 	return zapFields
 }

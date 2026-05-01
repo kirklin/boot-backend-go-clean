@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 )
 
 // Global logger instance
-var globalLogger Logger
+var (
+	globalLogger Logger
+	loggerOnce   sync.Once
+)
 
 // InitLogger initializes the global logger instance
 func InitLogger(config *LoggerConfig) error {
@@ -21,17 +25,30 @@ func InitLogger(config *LoggerConfig) error {
 	return nil
 }
 
-// GetLogger returns the global logger instance
+// GetLogger returns the global logger instance.
+// It is safe for concurrent use. If the logger has not been explicitly
+// initialized via InitLogger, it will be lazily initialized with defaults.
 func GetLogger() Logger {
-	if globalLogger == nil {
-		// If global logger is not initialized, initialize with default configuration
-		config := NewDefaultConfig()
-		if err := InitLogger(config); err != nil {
-			// At this point, the logger is not initialized, so we use the standard log package.
-			panic(fmt.Sprintf("Failed to initialize default logger: %v", err))
+	loggerOnce.Do(func() {
+		if globalLogger == nil {
+			config := NewDefaultConfig()
+			if err := initLoggerInternal(config); err != nil {
+				panic(fmt.Sprintf("Failed to initialize default logger: %v", err))
+			}
 		}
-	}
+	})
 	return globalLogger
+}
+
+// initLoggerInternal creates a logger without going through InitLogger
+// to avoid resetting loggerOnce state.
+func initLoggerInternal(config *LoggerConfig) error {
+	logger, err := NewLogger(config, "zap")
+	if err != nil {
+		return err
+	}
+	globalLogger = logger
+	return nil
 }
 
 // LogLevel defines the severity of a log message
@@ -253,18 +270,6 @@ func NewLogger(config *LoggerConfig, loggerType string) (Logger, error) {
 		return NewSlogLogger(config)
 	default:
 		return NewSlogLogger(config)
-	}
-}
-
-// Example usage of optional interfaces:
-func ConfigureLoggerOutputAndFormat(logger Logger, writer io.Writer, format LogFormat) {
-	// 类型断言检查日志实例是否实现了 ConfigurableLogger 接口
-	if configurableLogger, ok := logger.(ConfigurableLogger); ok {
-		configurableLogger.SetOutput(writer)
-		configurableLogger.SetFormat(format)
-	} else {
-		// The logger implementation does not support SetOutput or SetFormat.
-		GetLogger().Warn("Logger does not support output or format configuration")
 	}
 }
 
