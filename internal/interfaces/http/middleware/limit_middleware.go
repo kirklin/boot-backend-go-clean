@@ -2,13 +2,13 @@ package middleware
 
 import (
 	"errors"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 )
 
 type RateLimiter struct {
@@ -21,12 +21,34 @@ type RateLimiter struct {
 
 // NewRateLimiter 构建限流器，传入每个 IP 的限制请求次数和时间窗口（秒）
 func NewRateLimiter(limit int, duration time.Duration) *RateLimiter {
-
-	return &RateLimiter{
+	rl := &RateLimiter{
 		limit:          limit,
 		windowDuration: duration,
 		requests:       make(map[string]int),
 		resetTime:      make(map[string]time.Time),
+	}
+
+	// 启动后台清理任务，防止由于不断新增 IP 导致内存泄漏
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			rl.cleanup()
+		}
+	}()
+
+	return rl
+}
+
+func (rl *RateLimiter) cleanup() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	now := time.Now()
+	for ip, expireTime := range rl.resetTime {
+		if now.After(expireTime) {
+			delete(rl.requests, ip)
+			delete(rl.resetTime, ip)
+		}
 	}
 }
 
@@ -46,6 +68,7 @@ func (rl *RateLimiter) LimitMiddleware() gin.HandlerFunc {
 			rl.requests[clientIP] = 0
 			count = 0
 			rl.resetTime[clientIP] = time.Now().Add(rl.windowDuration)
+			resetTime = rl.resetTime[clientIP] // 修复: 更新局部变量，防止返回零时间戳
 		}
 
 		// 判断是否超过限制
