@@ -16,7 +16,7 @@ func NewMySQLDB() database.Database {
 }
 
 func (m *MySQLDB) Connect(config *database.Config) error {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=UTC",
 		config.User, config.Password, config.Host, config.Port, config.DBName)
 
 	var err error

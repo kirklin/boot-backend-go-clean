@@ -16,7 +16,7 @@ func NewPostgresDB() database.Database {
 }
 
 func (p *PostgresDB) Connect(config *database.Config) error {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=Asia/Shanghai",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=UTC",
 		config.Host, config.User, config.Password, config.DBName, config.Port, config.SSLMode)
 
 	var err error

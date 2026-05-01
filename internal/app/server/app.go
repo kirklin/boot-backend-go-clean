@@ -26,6 +26,9 @@ type Application struct {
 
 // NewApplication creates and initializes a new Application instance
 func NewApplication() (*Application, error) {
+	// Lock the global timezone to UTC to enforce UTC Everywhere
+	time.Local = time.UTC
+
 	config, err := configs.LoadConfig()
 	if err != nil {
 		return nil, err
