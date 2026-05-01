@@ -1,4 +1,4 @@
-.PHONY: help test test-coverage fmt vet run build dev dev-down dev-rebuild dev-logs docker-build docker-build-dev docker-push docker-build-push docker-clean
+.PHONY: help test test-coverage fmt vet lint race check run build dev dev-down dev-rebuild dev-logs docker-build docker-build-dev docker-push docker-build-push docker-clean
 
 SHELL := /bin/bash
 
@@ -74,6 +74,17 @@ fmt:
 ## Run go vet to catch potential issues
 vet:
 	go vet ./...
+
+## Run golangci-lint (install: https://golangci-lint.run/welcome/install)
+lint:
+	golangci-lint run --timeout=5m
+
+## Run tests with race detector
+race:
+	go test -race -count=1 ./...
+
+## Run all quality checks (fmt + vet + lint + test)
+check: fmt vet lint test
 
 # =============================================================================
 # Local Development (Docker)
