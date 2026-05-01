@@ -2,6 +2,9 @@ package server
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,9 +21,10 @@ import (
 
 // Application holds the core components of the application
 type Application struct {
-	Config *configs.AppConfig
-	Router *gin.Engine
-	DB     database.Database
+	Config     *configs.AppConfig
+	Router     *gin.Engine
+	DB         database.Database
+	httpServer *http.Server
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -109,19 +113,87 @@ func (app *Application) Initialize() error {
 	return nil
 }
 
-// Run starts the application
-func (app *Application) Run() error {
-	err := app.Router.SetTrustedProxies(nil)
-	if err != nil {
+// shutdownGracePeriod is the maximum time to wait for in-flight requests
+// to complete during graceful shutdown.
+const shutdownGracePeriod = 30 * time.Second
+
+// Run starts the HTTP server and blocks until ctx is cancelled.
+// When the parent context is cancelled (e.g. via signal.NotifyContext),
+// it automatically performs graceful shutdown: stops accepting new connections,
+// waits for in-flight requests to drain, and closes the database.
+//
+// This is the single lifecycle method — the caller only needs to do:
+//
+//	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+//	defer stop()
+//	app.Run(ctx)
+func (app *Application) Run(ctx context.Context) error {
+	log := logger.GetLogger()
+
+	if err := app.Router.SetTrustedProxies(nil); err != nil {
 		return err
 	}
-	return app.Router.Run(app.Config.ServerAddress())
+
+	app.httpServer = &http.Server{
+		Addr:    app.Config.ServerAddress(),
+		Handler: app.Router,
+
+		// Defense against slowloris and resource exhaustion attacks.
+		ReadTimeout:       15 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
+	}
+
+	// Start the HTTP server in a goroutine so we can listen for ctx cancellation.
+	serverErr := make(chan error, 1)
+	go func() {
+		log.Infof("HTTP server listening on %s", app.Config.ServerAddress())
+		if err := app.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- fmt.Errorf("HTTP server error: %w", err)
+		}
+		close(serverErr)
+	}()
+
+	// Block until we receive a shutdown signal or the server fails to start.
+	select {
+	case err := <-serverErr:
+		// Server failed to start (e.g. port already in use). Clean up and return.
+		app.shutdown()
+		return err
+	case <-ctx.Done():
+		log.Info("Shutdown signal received, draining in-flight requests...")
+	}
+
+	// Graceful shutdown with a deadline.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGracePeriod)
+	defer cancel()
+
+	// 1. Stop accepting new connections and drain in-flight requests.
+	if err := app.httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Errorf("HTTP server forced to shutdown: %v", err)
+	} else {
+		log.Info("HTTP server drained successfully")
+	}
+
+	// 2. Close infrastructure resources (database, etc.).
+	app.shutdown()
+
+	log.Info("Application stopped")
+	return nil
 }
 
-// Shutdown performs any necessary cleanup before the application exits
-func (app *Application) Shutdown() {
+// shutdown closes all infrastructure resources.
+func (app *Application) shutdown() {
+	log := logger.GetLogger()
 	if app.DB != nil {
-		_ = app.DB.Close()
+		log.Info("Closing database connection...")
+		if err := app.DB.Close(); err != nil {
+			log.Errorf("Error closing database: %v", err)
+		} else {
+			log.Info("Database connection closed")
+		}
 	}
 }
 

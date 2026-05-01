@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,32 +38,21 @@ func main() {
 		log.Fatalf("Failed to initialize application: %v", err)
 	}
 
-	// Set up a channel to listen for interrupt signals
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	// Create a context that is cancelled on SIGINT or SIGTERM.
+	// When a signal is received, ctx.Done() fires and app.Run
+	// automatically drains in-flight requests and shuts down cleanly.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// Start the application in a separate goroutine
-	go func() {
-		if err := app.Run(); err != nil {
-			log.Fatalf("Failed to run application: %v", err)
-		}
-	}()
+	// Run blocks until the context is cancelled, then performs graceful shutdown.
+	if err := app.Run(ctx); err != nil {
+		log.Fatalf("Application error: %v", err)
+	}
 
-	log.Infof("Application is running on %s. Press CTRL+C to stop.", app.Config.ServerAddress())
-
-	// Wait for interrupt signal
-	<-stop
-
-	log.Info("Shutting down gracefully...")
-
-	// Perform cleanup
-	app.Shutdown()
-
-	if err := logger.GetLogger().Sync(); err != nil {
+	if err := log.Sync(); err != nil {
 		// Ignore sync errors on stdout/stderr — these are not real files
 		// and produce "inappropriate ioctl for device" on macOS.
 		// This is a known Zap issue: https://github.com/uber-go/zap/issues/991
 	}
-
-	log.Info("Application stopped")
 }
+
