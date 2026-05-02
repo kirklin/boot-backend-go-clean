@@ -3,7 +3,9 @@ package route
 import (
 	"time"
 
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
@@ -22,6 +24,18 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 	}
 
 	router.Use(middleware.CORSMiddleware())
+
+	// Record Prometheus metrics for all incoming requests
+	router.Use(middleware.MetricsMiddleware())
+
+	// Expose Prometheus metrics endpoint
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Mount pprof performance profiling endpoints under /debug/pprof/
+	// (Only exposed in non-production environments for security)
+	if config.Environment != "production" {
+		pprof.Register(router)
+	}
 
 	// Root route
 	router.GET("/", func(c *gin.Context) {
