@@ -3,6 +3,7 @@ package entity
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,7 @@ func (u *User) Validate() error {
 	if u.Email == "" {
 		return errors.New("email cannot be empty")
 	}
+	u.Email = strings.ToLower(strings.TrimSpace(u.Email))
 	if !isValidEmail(u.Email) {
 		return errors.New("invalid email format")
 	}
@@ -37,8 +39,13 @@ func (u *User) Validate() error {
 	return nil
 }
 
+// emailRegex is compiled once at package init. Supports:
+//   - Case-insensitive matching ((?i) flag)
+//   - TLD length 2-63 (covers .museum, .travel, .technology, etc.)
+//   - Standard local-part characters per RFC 5321
+var emailRegex = regexp.MustCompile(`(?i)^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,63}$`)
+
 // isValidEmail 验证邮箱格式
 func isValidEmail(email string) bool {
-	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	return emailRegex.MatchString(email)
 }
