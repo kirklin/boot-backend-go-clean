@@ -5,13 +5,15 @@ SHELL := /bin/bash
 # =============================================================================
 # Version Information
 # =============================================================================
-VERSION    := $(shell cat VERSION 2>/dev/null || echo "1.0.0")
+VERSION    := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 TAG        ?= $(VERSION)
 
-VERSION_PKG := main
+VERSION_PKG := github.com/kirklin/boot-backend-go-clean/pkg/version
 GO_LDFLAGS  := -s -w -X $(VERSION_PKG).Version=$(VERSION) \
-               -X $(VERSION_PKG).GitCommit=$(GIT_COMMIT)
+               -X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) \
+               -X $(VERSION_PKG).BuildTime=$(BUILD_TIME)
 
 export GOPROXY ?= https://goproxy.cn,direct
 
