@@ -1,4 +1,4 @@
-.PHONY: help test test-coverage fmt vet lint race check run build dev dev-down dev-rebuild dev-logs docker-build docker-build-dev docker-push docker-build-push docker-clean
+.PHONY: help test test-coverage fmt vet lint race check mock generate run build dev dev-down dev-rebuild dev-logs docker-build docker-build-dev docker-push docker-build-push docker-clean
 
 SHELL := /bin/bash
 
@@ -87,6 +87,13 @@ race:
 
 ## Run all quality checks (fmt + vet + lint + test)
 check: fmt vet lint test
+
+## Generate mock implementations from interfaces (requires: go install github.com/vektra/mockery/v2@latest)
+mock:
+	mockery
+
+## Run all code generation (mocks, etc.)
+generate: mock
 
 # =============================================================================
 # Local Development (Docker)
