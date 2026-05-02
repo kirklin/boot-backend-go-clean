@@ -7,6 +7,7 @@ import (
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
@@ -38,10 +39,14 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 	// API routes
 	apiRouter := router.Group("/v1/api")
 
-	// Health check under API group
-	apiRouter.GET("/health", func(c *gin.Context) {
-		c.JSON(200, response.NewSuccessResponse[any]("success", nil))
-	})
+	// Health check endpoints
+	healthCtrl := controller.NewHealthController(db, config)
+	healthGroup := apiRouter.Group("/health")
+	{
+		healthGroup.GET("", healthCtrl.Live)        // backward compat: /v1/api/health
+		healthGroup.GET("/live", healthCtrl.Live)    // liveness probe: process is running
+		healthGroup.GET("/ready", healthCtrl.Ready)  // readiness probe: DB is reachable
+	}
 
 	tokenBlacklist := auth.NewTokenBlacklist()
 	authenticator := auth.NewJWTAuthenticator(

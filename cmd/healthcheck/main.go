@@ -16,7 +16,7 @@ func main() {
 		port = "8888"
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/v1/api/health", port)
+	url := fmt.Sprintf("http://localhost:%s/v1/api/health/ready", port)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)

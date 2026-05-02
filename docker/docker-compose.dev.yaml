@@ -50,7 +50,7 @@ services:
       # 使用匿名卷保存 tmp 目录（air 编译产物），不同步到宿主机
       - /app/tmp
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${SERVER_PORT:-8888}/v1/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${SERVER_PORT:-8888}/v1/api/health/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
