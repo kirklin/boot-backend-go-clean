@@ -1,5 +1,5 @@
 # =============================================================================
-# golangci-lint configuration
+# golangci-lint v2 configuration
 # https://golangci-lint.run/usage/configuration/
 # =============================================================================
 
@@ -27,30 +27,26 @@ linters:
   settings:
     misspell:
       locale: US
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
 
-linters-settings:
-  revive:
+  exclusions:
     rules:
-      # Allow stuttering in exported names (e.g. errors.ErrNotFound)
-      - name: exported
-        arguments:
-          - disableStutteringCheck
+      # Test files: relax noctx and bodyclose — httptest doesn't need real contexts
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - noctx
+      # Allow dot imports in test files (testify, gomock, etc.)
+      - path: _test\.go
+        text: "dot-imports"
 
 issues:
-  # Show all issues, don't cap per-linter
   max-issues-per-linter: 0
   max-same-issues: 0
-
-  exclude-rules:
-    # Test files can have longer functions and more magic numbers
-    - path: _test\.go
-      linters:
-        - bodyclose
-        - noctx
-
-    # Allow dot imports in test files (testify, gomock, etc.)
-    - path: _test\.go
-      text: "dot-imports"
 
 formatters:
   enable:
