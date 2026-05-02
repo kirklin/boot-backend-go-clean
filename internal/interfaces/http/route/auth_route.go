@@ -15,7 +15,8 @@ import (
 
 func NewAuthRouter(db database.Database, group *gin.RouterGroup, config *configs.AppConfig, authenticator gateway.Authenticator) {
 	ur := persistence.NewUserRepository(db)
-	ac := controller.NewAuthController(usecase.NewAuthUseCase(ur, authenticator, config))
+	txm := persistence.NewTxManager(db)
+	ac := controller.NewAuthController(usecase.NewAuthUseCase(ur, authenticator, txm, config))
 
 	authGroup := group.Group("/auth")
 	authGroup.POST("/register", ac.Register)

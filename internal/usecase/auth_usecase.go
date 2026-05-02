@@ -19,19 +19,23 @@ import (
 type authUseCase struct {
 	userRepo      repository.UserRepository
 	authenticator gateway.Authenticator
+	txManager     repository.TxManager
 	config        *configs.AppConfig
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository, authenticator gateway.Authenticator, config *configs.AppConfig) usecase.AuthUseCase {
+func NewAuthUseCase(userRepo repository.UserRepository, authenticator gateway.Authenticator, txManager repository.TxManager, config *configs.AppConfig) usecase.AuthUseCase {
 	return &authUseCase{
 		userRepo:      userRepo,
 		authenticator: authenticator,
+		txManager:     txManager,
 		config:        config,
 	}
 }
 
 func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest) (*entity.RegisterResponse, error) {
-	// Build and validate the user entity (domain-level validation)
+	// Build and validate the user entity (domain-level validation).
+	// Validation and bcrypt are done OUTSIDE the transaction to avoid
+	// holding a DB lock during CPU-intensive work.
 	newUser := &entity.User{
 		Username: req.Username,
 		Email:    req.Email,
@@ -41,34 +45,38 @@ func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest)
 		return nil, domainerrors.ErrValidationFailed.WithMessage(err.Error())
 	}
 
-	// Check if username already exists
-	existingUser, err := a.userRepo.FindByUsername(ctx, req.Username)
-	if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
-		return nil, domainerrors.ErrInternal.Wrap(err)
-	}
-	if existingUser != nil {
-		return nil, domainerrors.ErrUsernameExists
-	}
-
-	// Check if email already exists
-	existingEmail, err := a.userRepo.FindByEmail(ctx, req.Email)
-	if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
-		return nil, domainerrors.ErrInternal.Wrap(err)
-	}
-	if existingEmail != nil {
-		return nil, domainerrors.ErrEmailExists
-	}
-
-	// Hash password
+	// Hash password before entering the transaction
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 	newUser.Password = string(hashedPassword)
 
-	err = a.userRepo.Create(ctx, newUser)
+	// Run uniqueness checks + create atomically within a transaction.
+	// If any step fails, the entire operation is rolled back.
+	err = a.txManager.WithTx(ctx, func(txCtx context.Context) error {
+		// Check if username already exists
+		existingUser, err := a.userRepo.FindByUsername(txCtx, req.Username)
+		if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
+			return domainerrors.ErrInternal.Wrap(err)
+		}
+		if existingUser != nil {
+			return domainerrors.ErrUsernameExists
+		}
+
+		// Check if email already exists
+		existingEmail, err := a.userRepo.FindByEmail(txCtx, req.Email)
+		if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
+			return domainerrors.ErrInternal.Wrap(err)
+		}
+		if existingEmail != nil {
+			return domainerrors.ErrEmailExists
+		}
+
+		return a.userRepo.Create(txCtx, newUser)
+	})
 	if err != nil {
-		return nil, domainerrors.ErrInternal.Wrap(err)
+		return nil, err
 	}
 
 	return &entity.RegisterResponse{User: *newUser}, nil

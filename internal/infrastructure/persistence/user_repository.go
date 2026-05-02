@@ -27,7 +27,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 	dto := model.UserDTO{}
 	dto.ConvertFromEntity(user)
 
-	err := r.db.DB().WithContext(ctx).Create(&dto).Error
+	err := dbFromContext(ctx, r.db).Create(&dto).Error
 	if err != nil {
 		return err
 	}
@@ -40,21 +40,21 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 // FindByID retrieves a user by their ID
 func (r *userRepository) FindByID(ctx context.Context, id int64) (*entity.User, error) {
 	var dto model.UserDTO
-	err := r.db.DB().WithContext(ctx).First(&dto, id).Error
+	err := dbFromContext(ctx, r.db).First(&dto, id).Error
 	return r.handleQueryResult(&dto, err)
 }
 
 // FindByUsername retrieves a user by their username
 func (r *userRepository) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
 	var dto model.UserDTO
-	err := r.db.DB().WithContext(ctx).Where("username = ?", username).First(&dto).Error
+	err := dbFromContext(ctx, r.db).Where("username = ?", username).First(&dto).Error
 	return r.handleQueryResult(&dto, err)
 }
 
 // FindByEmail retrieves a user by their email
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var dto model.UserDTO
-	err := r.db.DB().WithContext(ctx).Where("email = ?", email).First(&dto).Error
+	err := dbFromContext(ctx, r.db).Where("email = ?", email).First(&dto).Error
 	return r.handleQueryResult(&dto, err)
 }
 
@@ -62,7 +62,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	var dto model.UserDTO
 	dto.ConvertFromEntity(user)
-	result := r.db.DB().WithContext(ctx).Save(&dto)
+	result := dbFromContext(ctx, r.db).Save(&dto)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -74,7 +74,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 
 // SoftDelete marks a user as deleted in the database
 func (r *userRepository) SoftDelete(ctx context.Context, id int64) error {
-	result := r.db.DB().WithContext(ctx).Delete(&model.UserDTO{}, id)
+	result := dbFromContext(ctx, r.db).Delete(&model.UserDTO{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

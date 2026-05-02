@@ -21,6 +21,7 @@ func newAuthUseCase(repo *testmock.MockUserRepository, auth *testmock.MockAuthen
 	return &authUseCase{
 		userRepo:      repo,
 		authenticator: auth,
+		txManager:     testmock.NewPassthroughTxManager(),
 		config:        &configs.AppConfig{RefreshTokenLifetime: 24},
 	}
 }
