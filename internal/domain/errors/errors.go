@@ -101,6 +101,7 @@ var (
 
 var (
 	ErrUsernameExists     = &AppError{Code: "USERNAME_ALREADY_EXISTS", Message: "Username already exists", HTTPCode: http.StatusConflict}
+	ErrEmailExists        = &AppError{Code: "EMAIL_ALREADY_EXISTS", Message: "Email already exists", HTTPCode: http.StatusConflict}
 	ErrInvalidCredentials = &AppError{Code: "INVALID_CREDENTIALS", Message: "Invalid username or password", HTTPCode: http.StatusUnauthorized}
 	ErrTokenBlacklisted   = &AppError{Code: "TOKEN_REVOKED", Message: "Token has been revoked", HTTPCode: http.StatusUnauthorized}
 	ErrTokenInvalid       = &AppError{Code: "TOKEN_INVALID", Message: "Invalid or expired token", HTTPCode: http.StatusUnauthorized}

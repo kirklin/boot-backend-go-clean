@@ -144,6 +144,10 @@ func (a *jwtAuthenticator) extractClaims(tokenString string, isAccessToken bool)
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		// Validate issuer to prevent cross-service token usage
+		if iss, ok := claims["iss"].(string); !ok || iss != string(a.issuer) {
+			return nil, errors.New("invalid token issuer")
+		}
 		return claims, nil
 	}
 

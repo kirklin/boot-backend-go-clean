@@ -24,6 +24,7 @@ func TestRegister_PasswordIsHashed_NotPlaintext(t *testing.T) {
 
 	var capturedUser *entity.User
 	repo.On("FindByUsername", mock.Anything, "alice").Return(nil, domainerrors.ErrUserNotFound)
+	repo.On("FindByEmail", mock.Anything, "alice@example.com").Return(nil, domainerrors.ErrUserNotFound)
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).
 		Run(func(args mock.Arguments) {
 			capturedUser = args.Get(1).(*entity.User)
@@ -53,6 +54,7 @@ func TestRegister_ResponseNeverLeaksPassword(t *testing.T) {
 	uc := newAuthUseCase(repo, auth)
 
 	repo.On("FindByUsername", mock.Anything, "alice").Return(nil, domainerrors.ErrUserNotFound)
+	repo.On("FindByEmail", mock.Anything, "alice@example.com").Return(nil, domainerrors.ErrUserNotFound)
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
 
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
@@ -105,7 +107,6 @@ func TestLogin_ResponseNeverLeaksPassword(t *testing.T) {
 
 func TestLogin_UserNotFound_And_WrongPassword_ReturnSameError(t *testing.T) {
 	// 攻击者不应该能通过错误消息区分 "用户不存在" 和 "密码错误"
-	// 否则可以枚举用户名
 
 	// Case 1: 用户不存在
 	repo1 := new(testmock.MockUserRepository)
@@ -134,74 +135,58 @@ func TestLogin_UserNotFound_And_WrongPassword_ReturnSameError(t *testing.T) {
 		"error messages must be identical to prevent username enumeration")
 }
 
-// ─── 注册时不做邮箱唯一性校验是否是有意的？ ──────────────────────────────────
+// ─── 邮箱唯一性校验 ──────────────────────────────────────────────────────────
 
-func TestRegister_DuplicateEmail_IsNotChecked(t *testing.T) {
-	// 当前代码只检查 username 唯一性，不检查 email
-	// 这意味着不同用户可以用同一个邮箱注册
-	// 这可能是 BUG，也可能是设计选择——需要显式记录
-
+func TestRegister_DuplicateEmail_IsRejected(t *testing.T) {
 	repo := new(testmock.MockUserRepository)
 	auth := new(testmock.MockAuthenticator)
 	uc := newAuthUseCase(repo, auth)
 
 	repo.On("FindByUsername", mock.Anything, "alice").Return(nil, domainerrors.ErrUserNotFound)
-	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
+	// 邮箱已被其他用户注册
+	existingUser := &entity.User{ID: 99, Username: "bob", Email: "taken@example.com"}
+	repo.On("FindByEmail", mock.Anything, "taken@example.com").Return(existingUser, nil)
 
-	// 即使邮箱 "taken@example.com" 已被其他用户使用，注册仍然成功
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "alice",
 		Email:    "taken@example.com",
-		Password: "securepassword",
+		Password: "securepassword1",
 	})
 
-	// 当前行为：注册成功（因为没有邮箱唯一性检查）
-	// 如果未来要加邮箱唯一性检查，这个测试应该改为 assert error
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
+	assert.ErrorIs(t, err, domainerrors.ErrEmailExists)
+	assert.Nil(t, resp)
 }
 
-// ─── 注册不做输入验证是否是有意的？ ──────────────────────────────────────────
+// ─── 注册输入验证 ────────────────────────────────────────────────────────────
 
-func TestRegister_DoesNotValidateInput(t *testing.T) {
-	// Register 没有调用 user.Validate()
-	// 这意味着可以注册空用户名、短密码等
-	// UpdateUser 调用了 Validate() 但 Register 没有——这是不一致的
+func TestRegister_ValidatesInput(t *testing.T) {
+	// Register 现在调用 Validate()，空用户名应被拒绝
 
 	repo := new(testmock.MockUserRepository)
 	auth := new(testmock.MockAuthenticator)
 	uc := newAuthUseCase(repo, auth)
 
-	repo.On("FindByUsername", mock.Anything, "").Return(nil, domainerrors.ErrUserNotFound)
-	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
-
-	// 空用户名 + 短密码 → 当前行为是通过（因为没有 Validate）
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "",
 		Email:    "",
 		Password: "short",
 	})
 
-	// 记录当前行为：Register 不做验证，依赖 Gin binding tags
-	// 如果 Register 应该调用 Validate()，这个测试应该改为 assert error
-	assert.NoError(t, err, "current behavior: Register does NOT call Validate()")
-	assert.NotNil(t, resp)
+	assert.Error(t, err, "empty username should be rejected by Validate()")
+	assert.Nil(t, resp)
 }
 
-func TestRegister_BcryptRejectsPasswordOver72Bytes(t *testing.T) {
-	// Go 1.24+ bcrypt 拒绝超过 72 字节的密码（不再静默截断）
-	// 当前代码没有在 Register 层面做密码长度上限校验
-	// 导致用户输入超长密码时收到 500 Internal Server Error
-	// 这应该在验证层返回 400 Bad Request
+// ─── 密码长度上限 ────────────────────────────────────────────────────────────
+
+func TestRegister_PasswordOver72Bytes_ReturnsBadRequest(t *testing.T) {
+	// Domain 层 Validate() 现在检查密码长度上限
+	// 确保返回 400 而不是 500
 
 	repo := new(testmock.MockUserRepository)
 	auth := new(testmock.MockAuthenticator)
 	uc := newAuthUseCase(repo, auth)
 
-	longPassword := strings.Repeat("a", 73) // 超过 72 字节
-
-	repo.On("FindByUsername", mock.Anything, "alice").Return(nil, domainerrors.ErrUserNotFound)
-	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil).Maybe()
+	longPassword := strings.Repeat("a", 73)
 
 	_, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "alice",
@@ -209,11 +194,9 @@ func TestRegister_BcryptRejectsPasswordOver72Bytes(t *testing.T) {
 		Password: longPassword,
 	})
 
-	// 当前行为：返回 ErrInternal（500），因为 bcrypt.GenerateFromPassword 报错
-	// 理想行为：应该在输入验证阶段返回 400
 	assert.Error(t, err, "passwords > 72 bytes must be rejected")
-	assert.Contains(t, err.Error(), "INTERNAL_ERROR",
-		"BUG: should be a validation error (400), not an internal error (500)")
+	assert.Contains(t, err.Error(), "VALIDATION_FAILED",
+		"should be a validation error (400), not internal (500)")
 }
 
 func TestRegister_PasswordExactly72BytesWorks(t *testing.T) {
@@ -221,9 +204,10 @@ func TestRegister_PasswordExactly72BytesWorks(t *testing.T) {
 	auth := new(testmock.MockAuthenticator)
 	uc := newAuthUseCase(repo, auth)
 
-	password72 := strings.Repeat("a", 72) // 恰好 72 字节
+	password72 := strings.Repeat("a", 72)
 
 	repo.On("FindByUsername", mock.Anything, "alice").Return(nil, domainerrors.ErrUserNotFound)
+	repo.On("FindByEmail", mock.Anything, "alice@example.com").Return(nil, domainerrors.ErrUserNotFound)
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
 
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
@@ -258,12 +242,10 @@ func TestLogout_TokenIsBlacklistedImmediately(t *testing.T) {
 		"the exact token from the request must be blacklisted")
 }
 
-// ─── Refresh 后旧 token 是否失效？ ───────────────────────────────────────────
+// ─── Refresh 后旧 token 必须失效 ─────────────────────────────────────────────
 
-func TestRefreshToken_OldTokenNotBlacklisted(t *testing.T) {
-	// 当前实现：RefreshToken 成功后没有把旧的 refresh token 加入黑名单
-	// 这意味着旧 token 仍然可用，存在 token 重放攻击风险
-	// 这是一个需要明确评估的安全决策
+func TestRefreshToken_OldTokenIsBlacklisted(t *testing.T) {
+	// 刷新成功后旧 refresh token 应被加入黑名单，防止重放攻击
 
 	repo := new(testmock.MockUserRepository)
 	auth := new(testmock.MockAuthenticator)
@@ -278,14 +260,13 @@ func TestRefreshToken_OldTokenNotBlacklisted(t *testing.T) {
 	auth.On("GenerateTokenPair", user).Return(&entity.TokenPair{
 		AccessToken: "new-at", RefreshToken: "new-rt",
 	}, nil)
+	auth.On("BlacklistToken", "old-refresh", mock.Anything).Return()
 
 	_, err := uc.RefreshToken(context.Background(), &entity.RefreshTokenRequest{
 		RefreshToken: "old-refresh",
 	})
 	assert.NoError(t, err)
 
-	// 旧 token 没有被黑名单——这是当前行为
-	// 如果要修复 token rotation，应该在 RefreshToken 中 BlacklistToken("old-refresh", ...)
-	auth.AssertNotCalled(t, "BlacklistToken",
-		"current behavior: old refresh token is NOT blacklisted after rotation — potential replay risk")
+	// 验证旧 token 确实被加入了黑名单
+	auth.AssertCalled(t, "BlacklistToken", "old-refresh", mock.Anything)
 }

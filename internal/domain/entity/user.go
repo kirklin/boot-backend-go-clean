@@ -31,6 +31,9 @@ func (u *User) Validate() error {
 	if len(u.Password) < 8 {
 		return errors.New("password must be at least 8 characters long")
 	}
+	if len(u.Password) > 72 {
+		return errors.New("password must not exceed 72 bytes")
+	}
 	return nil
 }
 

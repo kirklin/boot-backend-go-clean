@@ -31,7 +31,17 @@ func NewAuthUseCase(userRepo repository.UserRepository, authenticator gateway.Au
 }
 
 func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest) (*entity.RegisterResponse, error) {
-	// Check if user already exists
+	// Build and validate the user entity (domain-level validation)
+	newUser := &entity.User{
+		Username: req.Username,
+		Email:    req.Email,
+		Password: req.Password, // Validated then hashed below
+	}
+	if err := newUser.Validate(); err != nil {
+		return nil, domainerrors.ErrValidationFailed.WithMessage(err.Error())
+	}
+
+	// Check if username already exists
 	existingUser, err := a.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
 		return nil, domainerrors.ErrInternal.Wrap(err)
@@ -40,18 +50,21 @@ func (a *authUseCase) Register(ctx context.Context, req *entity.RegisterRequest)
 		return nil, domainerrors.ErrUsernameExists
 	}
 
+	// Check if email already exists
+	existingEmail, err := a.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil && !errors.Is(err, domainerrors.ErrUserNotFound) {
+		return nil, domainerrors.ErrInternal.Wrap(err)
+	}
+	if existingEmail != nil {
+		return nil, domainerrors.ErrEmailExists
+	}
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
-
-	// Create new user
-	newUser := &entity.User{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: string(hashedPassword),
-	}
+	newUser.Password = string(hashedPassword)
 
 	err = a.userRepo.Create(ctx, newUser)
 	if err != nil {
@@ -115,6 +128,9 @@ func (a *authUseCase) RefreshToken(ctx context.Context, req *entity.RefreshToken
 	if err != nil {
 		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
+
+	// Blacklist old refresh token to prevent replay attacks
+	a.authenticator.BlacklistToken(req.RefreshToken, time.Duration(a.config.RefreshTokenLifetime)*time.Hour)
 
 	return &entity.RefreshTokenResponse{
 		AccessToken:  tokenPair.AccessToken,

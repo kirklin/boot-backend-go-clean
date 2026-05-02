@@ -91,6 +91,7 @@ func TestSentinelErrors_HTTPCodes(t *testing.T) {
 		{ErrTooManyRequests, http.StatusTooManyRequests, "RATE_LIMITED"},
 		{ErrRequestTimeout, http.StatusRequestTimeout, "REQUEST_TIMEOUT"},
 		{ErrUsernameExists, http.StatusConflict, "USERNAME_ALREADY_EXISTS"},
+		{ErrEmailExists, http.StatusConflict, "EMAIL_ALREADY_EXISTS"},
 		{ErrInvalidCredentials, http.StatusUnauthorized, "INVALID_CREDENTIALS"},
 		{ErrTokenBlacklisted, http.StatusUnauthorized, "TOKEN_REVOKED"},
 		{ErrTokenInvalid, http.StatusUnauthorized, "TOKEN_INVALID"},

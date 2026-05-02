@@ -33,12 +33,13 @@ func TestAuthUseCase_Register_Success(t *testing.T) {
 	uc := newAuthUseCase(repo, auth)
 
 	repo.On("FindByUsername", mock.Anything, "newuser").Return(nil, domainerrors.ErrUserNotFound)
+	repo.On("FindByEmail", mock.Anything, "new@example.com").Return(nil, domainerrors.ErrUserNotFound)
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
 
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "newuser",
 		Email:    "new@example.com",
-		Password: "securepassword",
+		Password: "securepassword1",
 	})
 
 	assert.NoError(t, err)
@@ -52,13 +53,13 @@ func TestAuthUseCase_Register_UsernameExists(t *testing.T) {
 	auth := new(testmock.MockAuthenticator)
 	uc := newAuthUseCase(repo, auth)
 
-	existingUser := &entity.User{ID: 1, Username: "existing"}
+	existingUser := &entity.User{ID: 1, Username: "existing", Email: "e@example.com", Password: "securepass1"}
 	repo.On("FindByUsername", mock.Anything, "existing").Return(existingUser, nil)
 
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "existing",
 		Email:    "test@example.com",
-		Password: "securepassword",
+		Password: "securepassword1",
 	})
 
 	assert.ErrorIs(t, err, domainerrors.ErrUsernameExists)
@@ -155,6 +156,7 @@ func TestAuthUseCase_RefreshToken_Success(t *testing.T) {
 		RefreshToken: "new-refresh",
 		ExpiresAt:    time.Now().Add(time.Hour),
 	}, nil)
+	auth.On("BlacklistToken", "valid-refresh", mock.Anything).Return()
 
 	resp, err := uc.RefreshToken(context.Background(), &entity.RefreshTokenRequest{
 		RefreshToken: "valid-refresh",
@@ -224,7 +226,7 @@ func TestAuthUseCase_Register_DBErrorOnFindByUsername(t *testing.T) {
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "newuser",
 		Email:    "new@example.com",
-		Password: "securepassword",
+		Password: "securepassword1",
 	})
 
 	assert.Error(t, err)
@@ -240,12 +242,13 @@ func TestAuthUseCase_Register_CreateFails(t *testing.T) {
 	uc := newAuthUseCase(repo, auth)
 
 	repo.On("FindByUsername", mock.Anything, "newuser").Return(nil, domainerrors.ErrUserNotFound)
+	repo.On("FindByEmail", mock.Anything, "new@example.com").Return(nil, domainerrors.ErrUserNotFound)
 	repo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(fmt.Errorf("unique constraint violated"))
 
 	resp, err := uc.Register(context.Background(), &entity.RegisterRequest{
 		Username: "newuser",
 		Email:    "new@example.com",
-		Password: "securepassword",
+		Password: "securepassword1",
 	})
 
 	assert.Error(t, err)

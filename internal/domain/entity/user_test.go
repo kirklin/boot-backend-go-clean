@@ -42,6 +42,16 @@ func TestUser_Validate(t *testing.T) {
 			user:    User{Username: "kirk", Email: "kirk@example.com", Password: "12345678"},
 			wantErr: "",
 		},
+		{
+			name:    "password exceeds 72 bytes",
+			user:    User{Username: "kirk", Email: "kirk@example.com", Password: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			wantErr: "password must not exceed 72 bytes",
+		},
+		{
+			name:    "password exactly 72 bytes",
+			user:    User{Username: "kirk", Email: "kirk@example.com", Password: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			wantErr: "",
+		},
 	}
 
 	for _, tt := range tests {

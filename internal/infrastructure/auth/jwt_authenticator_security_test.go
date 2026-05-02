@@ -175,15 +175,10 @@ func TestSecurity_TokensFromDifferentIssuersAreRejected(t *testing.T) {
 	pair, err := auth1.GenerateTokenPair(testUser())
 	require.NoError(t, err)
 
-	// 当前实现：不验证 issuer，所以这会通过
-	// 如果添加了 issuer 验证，这个测试应该 assert Error
-	claims, _, err := auth2.ValidateAccessToken(pair.AccessToken)
-
-	if err == nil {
-		// 记录当前行为：issuer 不被验证
-		t.Log("WARNING: issuer is NOT validated — tokens from different issuers are accepted")
-		assert.Equal(t, int64(42), claims.UserID)
-	}
+	// issuer-A 签发的 token 不应被 issuer-B 接受
+	_, _, err = auth2.ValidateAccessToken(pair.AccessToken)
+	assert.Error(t, err, "tokens from different issuers must be rejected")
+	assert.Contains(t, err.Error(), "invalid token issuer")
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
