@@ -43,8 +43,8 @@ func JWTAuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 		}
 
 		// Set the user information in the context
-		c.Set("x-user-id", claims.UserID)
-		c.Set("x-username", claims.Username)
+		c.Set(ContextKeyUserID, claims.UserID)
+		c.Set(ContextKeyUsername, claims.Username)
 
 		c.Next()
 	}
@@ -52,7 +52,7 @@ func JWTAuthMiddleware(validator TokenValidator) gin.HandlerFunc {
 
 // GetUserIDFromContext retrieves the user ID from the Gin context
 func GetUserIDFromContext(c *gin.Context) (int64, bool) {
-	userID, exists := c.Get("x-user-id")
+	userID, exists := c.Get(ContextKeyUserID)
 	if !exists {
 		return 0, false
 	}
@@ -61,7 +61,7 @@ func GetUserIDFromContext(c *gin.Context) (int64, bool) {
 
 // GetUsernameFromContext retrieves the username from the Gin context
 func GetUsernameFromContext(c *gin.Context) (string, bool) {
-	username, exists := c.Get("x-username")
+	username, exists := c.Get(ContextKeyUsername)
 	if !exists {
 		return "", false
 	}

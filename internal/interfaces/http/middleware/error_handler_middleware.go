@@ -10,8 +10,8 @@ import (
 	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 )
 
-// ErrorHandler is a global middleware that catches uncaught errors from c.Error() and formats them
-func ErrorHandler() gin.HandlerFunc {
+// ErrorHandlerMiddleware is a middleware that handles errors set via c.Error() and formats them
+func ErrorHandlerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 

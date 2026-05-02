@@ -43,18 +43,20 @@ func NewApplication() (*Application, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Redirect Gin's logs to our custom logger
+	// Redirect Gin's internal debug/warning logs to our logger
 	gin.DefaultWriter = &ginLogWriter{logger: logger.GetLogger()}
 	router := gin.New()
 
-	// Register RequestID as early as possible so it's included in logs
-	router.Use(middleware.RequestID())
+	// Register RequestID as early as possible so it's included in access logs
+	router.Use(middleware.RequestIDMiddleware())
 
-	router.Use(gin.LoggerWithWriter(gin.DefaultWriter))
+	// Structured access log replaces gin.Logger() — outputs JSON fields
+	// (method, path, status, latency_ms, client_ip, request_id, user_id, etc.)
+	router.Use(middleware.AccessLogMiddleware(logger.GetLogger()))
 	router.Use(gin.Recovery())
 
 	// Add global ErrorHandler middleware to format any c.Error() calls
-	router.Use(middleware.ErrorHandler())
+	router.Use(middleware.ErrorHandlerMiddleware())
 
 	// Add timeout middleware
 	router.Use(middleware.TimeoutMiddleware(time.Duration(config.RequestTimeout) * time.Second))

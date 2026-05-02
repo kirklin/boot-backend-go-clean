@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 
 func TestErrorHandler_WithAppError(t *testing.T) {
 	r := gin.New()
-	r.Use(ErrorHandler())
+	r.Use(ErrorHandlerMiddleware())
 	r.GET("/test", func(c *gin.Context) {
 		_ = c.Error(domainerrors.ErrUserNotFound)
 	})
@@ -42,7 +42,7 @@ func TestErrorHandler_WithAppError(t *testing.T) {
 
 func TestErrorHandler_WithGenericError(t *testing.T) {
 	r := gin.New()
-	r.Use(ErrorHandler())
+	r.Use(ErrorHandlerMiddleware())
 	r.GET("/test", func(c *gin.Context) {
 		_ = c.Error(errors.New("unexpected panic"))
 	})
@@ -56,7 +56,7 @@ func TestErrorHandler_WithGenericError(t *testing.T) {
 
 func TestErrorHandler_NoErrors(t *testing.T) {
 	r := gin.New()
-	r.Use(ErrorHandler())
+	r.Use(ErrorHandlerMiddleware())
 	r.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})
@@ -70,7 +70,7 @@ func TestErrorHandler_NoErrors(t *testing.T) {
 
 func TestErrorHandler_ResponseAlreadyWritten(t *testing.T) {
 	r := gin.New()
-	r.Use(ErrorHandler())
+	r.Use(ErrorHandlerMiddleware())
 	r.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "already written"})
 		_ = c.Error(domainerrors.ErrInternal)

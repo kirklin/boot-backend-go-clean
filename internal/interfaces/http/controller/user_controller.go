@@ -29,7 +29,7 @@ func (c *UserController) GetUser(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.userUseCase.GetUserByID(ctx, userID)
+	user, err := c.userUseCase.GetUserByID(ctx.Request.Context(), userID)
 	if err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to get user", err))
 		return
@@ -45,7 +45,7 @@ func (c *UserController) GetCurrentUser(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.userUseCase.GetUserByID(ctx, userID)
+	user, err := c.userUseCase.GetUserByID(ctx.Request.Context(), userID)
 	if err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to get user", err))
 		return
@@ -61,7 +61,7 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.userUseCase.UpdateUser(ctx, &user); err != nil {
+	if err := c.userUseCase.UpdateUser(ctx.Request.Context(), &user); err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to update user", err))
 		return
 	}
@@ -76,7 +76,7 @@ func (c *UserController) DeleteUser(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.userUseCase.SoftDeleteUser(ctx, userID); err != nil {
+	if err := c.userUseCase.SoftDeleteUser(ctx.Request.Context(), userID); err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to delete user", err))
 		return
 	}

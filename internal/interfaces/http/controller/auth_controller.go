@@ -28,7 +28,7 @@ func (c *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	resp, err := c.authUseCase.Register(ctx, &req)
+	resp, err := c.authUseCase.Register(ctx.Request.Context(), &req)
 	if err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Registration failed", err))
 		return
@@ -44,7 +44,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	resp, err := c.authUseCase.Login(ctx, &req)
+	resp, err := c.authUseCase.Login(ctx.Request.Context(), &req)
 	if err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusUnauthorized), response.NewErrorResponse("Login failed", err))
 		return
@@ -60,7 +60,7 @@ func (c *AuthController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	resp, err := c.authUseCase.RefreshToken(ctx, &req)
+	resp, err := c.authUseCase.RefreshToken(ctx.Request.Context(), &req)
 	if err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusUnauthorized), response.NewErrorResponse("Token refresh failed", err))
 		return
@@ -76,7 +76,7 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 		return
 	}
 
-	err := c.authUseCase.Logout(ctx, &req)
+	err := c.authUseCase.Logout(ctx.Request.Context(), &req)
 	if err != nil {
 		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Logout failed", err))
 		return

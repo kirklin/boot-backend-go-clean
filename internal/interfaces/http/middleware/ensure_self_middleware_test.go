@@ -19,7 +19,7 @@ func setupEnsureSelfRouter(getTargetUserID func(c *gin.Context) (int64, error)) 
 	r.Use(func(c *gin.Context) {
 		if uid := c.GetHeader("X-Test-UserID"); uid != "" {
 			id, _ := strconv.ParseInt(uid, 10, 64)
-			c.Set("x-user-id", id)
+			c.Set(ContextKeyUserID, id)
 		}
 		c.Next()
 	})

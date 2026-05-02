@@ -13,6 +13,7 @@ import (
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	testmock "github.com/kirklin/boot-backend-go-clean/internal/testutil/mock"
 )
 
@@ -171,7 +172,7 @@ func setupCurrentUserRouter(ctrl *UserController) *gin.Engine {
 	r := gin.New()
 	r.GET("/me", func(c *gin.Context) {
 		// Simulate JWT middleware setting user ID
-		c.Set("x-user-id", int64(42))
+		c.Set(middleware.ContextKeyUserID, int64(42))
 		c.Next()
 	}, ctrl.GetCurrentUser)
 	r.GET("/me-noauth", ctrl.GetCurrentUser) // Without user context
