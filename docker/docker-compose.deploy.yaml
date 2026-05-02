@@ -66,8 +66,48 @@ services:
     networks:
       - app-network
 
+  ####################### OBSERVABILITY #######################
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    environment:
+      - SERVER_PORT=${SERVER_PORT:-8888}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sed "s/\$${SERVER_PORT}/$$SERVER_PORT/g" /etc/prometheus/prometheus.yml.template > /etc/prometheus/prometheus.yml
+        /bin/prometheus --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./docker/prometheus/prometheus.yml.template:/etc/prometheus/prometheus.yml.template:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-9091}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
 volumes:
   db_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:
