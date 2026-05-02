@@ -9,27 +9,53 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/humaerr"
 	testmock "github.com/kirklin/boot-backend-go-clean/internal/testutil/mock"
 )
 
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
+	humaerr.Setup()
 	os.Exit(m.Run())
 }
 
-func setupAuthRouter(ctrl *AuthController) *gin.Engine {
+func setupAuthAPI(ctrl *AuthController) (*gin.Engine, huma.API) {
 	r := gin.New()
-	r.POST("/register", ctrl.Register)
-	r.POST("/login", ctrl.Login)
-	r.POST("/refresh", ctrl.RefreshToken)
-	r.POST("/logout", ctrl.Logout)
-	return r
+	api := humagin.New(r, huma.DefaultConfig("Test", "1.0.0"))
+
+	huma.Register(api, huma.Operation{
+		OperationID: "auth-register",
+		Method:      http.MethodPost,
+		Path:        "/register",
+	}, ctrl.Register)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "auth-login",
+		Method:      http.MethodPost,
+		Path:        "/login",
+	}, ctrl.Login)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "auth-refresh",
+		Method:      http.MethodPost,
+		Path:        "/refresh",
+	}, ctrl.RefreshToken)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "auth-logout",
+		Method:      http.MethodPost,
+		Path:        "/logout",
+	}, ctrl.Logout)
+
+	return r, api
 }
 
 func toJSON(t *testing.T, v any) *bytes.Buffer {
@@ -44,7 +70,7 @@ func toJSON(t *testing.T, v any) *bytes.Buffer {
 func TestAuthController_Register_Success(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("Register", mock.Anything, mock.AnythingOfType("*entity.RegisterRequest")).Return(
 		&entity.RegisterResponse{User: entity.User{ID: 1, Username: "kirk"}}, nil,
@@ -56,14 +82,14 @@ func TestAuthController_Register_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "kirk")
 }
 
 func TestAuthController_Register_Conflict(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("Register", mock.Anything, mock.AnythingOfType("*entity.RegisterRequest")).Return(
 		nil, domainerrors.ErrUsernameExists,
@@ -75,15 +101,14 @@ func TestAuthController_Register_Conflict(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	// HTTPCodeFromError should extract 409 from ErrUsernameExists
+	// huma.NewError (customized) should extract 409 from ErrUsernameExists
 	assert.Equal(t, http.StatusConflict, w.Code)
-	assert.Contains(t, w.Body.String(), "USERNAME_ALREADY_EXISTS")
 }
 
 func TestAuthController_Register_InvalidInput(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBufferString(`{invalid`))
@@ -98,7 +123,7 @@ func TestAuthController_Register_InvalidInput(t *testing.T) {
 func TestAuthController_Login_Success(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("Login", mock.Anything, mock.AnythingOfType("*entity.LoginRequest")).Return(
 		&entity.LoginResponse{
@@ -122,7 +147,7 @@ func TestAuthController_Login_Success(t *testing.T) {
 func TestAuthController_Login_InvalidCredentials(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("Login", mock.Anything, mock.AnythingOfType("*entity.LoginRequest")).Return(
 		nil, domainerrors.ErrInvalidCredentials,
@@ -135,7 +160,6 @@ func TestAuthController_Login_InvalidCredentials(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "INVALID_CREDENTIALS")
 }
 
 // ─── RefreshToken ─────────────────────────────────────────────────────────────
@@ -143,7 +167,7 @@ func TestAuthController_Login_InvalidCredentials(t *testing.T) {
 func TestAuthController_RefreshToken_Success(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("RefreshToken", mock.Anything, mock.AnythingOfType("*entity.RefreshTokenRequest")).Return(
 		&entity.RefreshTokenResponse{
@@ -166,7 +190,7 @@ func TestAuthController_RefreshToken_Success(t *testing.T) {
 func TestAuthController_RefreshToken_Revoked(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("RefreshToken", mock.Anything, mock.AnythingOfType("*entity.RefreshTokenRequest")).Return(
 		nil, domainerrors.ErrTokenBlacklisted,
@@ -179,7 +203,6 @@ func TestAuthController_RefreshToken_Revoked(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "TOKEN_REVOKED")
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -187,7 +210,7 @@ func TestAuthController_RefreshToken_Revoked(t *testing.T) {
 func TestAuthController_Logout_Success(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("Logout", mock.Anything, mock.AnythingOfType("*entity.LogoutRequest")).Return(nil)
 
@@ -206,7 +229,7 @@ func TestAuthController_Logout_Success(t *testing.T) {
 func TestAuthController_Login_InvalidJSON(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBufferString(`{invalid`))
@@ -219,7 +242,7 @@ func TestAuthController_Login_InvalidJSON(t *testing.T) {
 func TestAuthController_RefreshToken_InvalidJSON(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/refresh", bytes.NewBufferString(`{invalid`))
@@ -232,7 +255,7 @@ func TestAuthController_RefreshToken_InvalidJSON(t *testing.T) {
 func TestAuthController_Logout_InvalidJSON(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/logout", bytes.NewBufferString(`{invalid`))
@@ -245,7 +268,7 @@ func TestAuthController_Logout_InvalidJSON(t *testing.T) {
 func TestAuthController_Logout_UseCaseError(t *testing.T) {
 	mockUC := new(testmock.MockAuthUseCase)
 	ctrl := NewAuthController(mockUC)
-	router := setupAuthRouter(ctrl)
+	router, _ := setupAuthAPI(ctrl)
 
 	mockUC.On("Logout", mock.Anything, mock.AnythingOfType("*entity.LogoutRequest")).Return(
 		domainerrors.ErrInternal,

@@ -1,14 +1,13 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
-
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/humaerr"
 )
 
 type AuthController struct {
@@ -21,66 +20,82 @@ func NewAuthController(authUseCase usecase.AuthUseCase) *AuthController {
 	}
 }
 
-func (c *AuthController) Register(ctx *gin.Context) {
-	var req entity.RegisterRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid input", err))
-		return
-	}
+// --- Huma Input/Output types ---
 
-	resp, err := c.authUseCase.Register(ctx.Request.Context(), &req)
-	if err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Registration failed", err))
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, response.NewSuccessResponse("User registered successfully", resp))
+type RegisterInput struct {
+	Body entity.RegisterRequest
 }
 
-func (c *AuthController) Login(ctx *gin.Context) {
-	var req entity.LoginRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid input", err))
-		return
-	}
-
-	resp, err := c.authUseCase.Login(ctx.Request.Context(), &req)
-	if err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusUnauthorized), response.NewErrorResponse("Login failed", err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse("Login successful", resp))
+type RegisterOutput struct {
+	Body response.Response[*entity.RegisterResponse]
 }
 
-func (c *AuthController) RefreshToken(ctx *gin.Context) {
-	var req entity.RefreshTokenRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid input", err))
-		return
-	}
-
-	resp, err := c.authUseCase.RefreshToken(ctx.Request.Context(), &req)
-	if err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusUnauthorized), response.NewErrorResponse("Token refresh failed", err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse("Token refreshed successfully", resp))
+type LoginInput struct {
+	Body entity.LoginRequest
 }
 
-func (c *AuthController) Logout(ctx *gin.Context) {
-	var req entity.LogoutRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid input", err))
-		return
-	}
+type LoginOutput struct {
+	Body response.Response[*entity.LoginResponse]
+}
 
-	err := c.authUseCase.Logout(ctx.Request.Context(), &req)
+type RefreshTokenInput struct {
+	Body entity.RefreshTokenRequest
+}
+
+type RefreshTokenOutput struct {
+	Body response.Response[*entity.RefreshTokenResponse]
+}
+
+type LogoutInput struct {
+	Body entity.LogoutRequest
+}
+
+type LogoutOutput struct {
+	Body response.Response[any]
+}
+
+// --- Huma handlers ---
+
+func (c *AuthController) Register(ctx context.Context, input *RegisterInput) (*RegisterOutput, error) {
+	resp, err := c.authUseCase.Register(ctx, &input.Body)
 	if err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Logout failed", err))
-		return
+		return nil, humaerr.NewHumaError(http.StatusInternalServerError, "Registration failed", err)
 	}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("Logged out successfully", nil))
+	return &RegisterOutput{
+		Body: response.NewSuccessResponse("User registered successfully", resp),
+	}, nil
+}
+
+func (c *AuthController) Login(ctx context.Context, input *LoginInput) (*LoginOutput, error) {
+	resp, err := c.authUseCase.Login(ctx, &input.Body)
+	if err != nil {
+		return nil, humaerr.NewHumaError(http.StatusUnauthorized, "Login failed", err)
+	}
+
+	return &LoginOutput{
+		Body: response.NewSuccessResponse("Login successful", resp),
+	}, nil
+}
+
+func (c *AuthController) RefreshToken(ctx context.Context, input *RefreshTokenInput) (*RefreshTokenOutput, error) {
+	resp, err := c.authUseCase.RefreshToken(ctx, &input.Body)
+	if err != nil {
+		return nil, humaerr.NewHumaError(http.StatusUnauthorized, "Token refresh failed", err)
+	}
+
+	return &RefreshTokenOutput{
+		Body: response.NewSuccessResponse("Token refreshed successfully", resp),
+	}, nil
+}
+
+func (c *AuthController) Logout(ctx context.Context, input *LogoutInput) (*LogoutOutput, error) {
+	err := c.authUseCase.Logout(ctx, &input.Body)
+	if err != nil {
+		return nil, humaerr.NewHumaError(http.StatusInternalServerError, "Logout failed", err)
+	}
+
+	return &LogoutOutput{
+		Body: response.NewSuccessResponse[any]("Logged out successfully", nil),
+	}, nil
 }

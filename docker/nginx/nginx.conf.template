@@ -3,6 +3,10 @@ server {
     listen  [::]:${GATEWAY_PORT};
     server_name _;
 
+    # Ensure upstream Content-Type is preserved
+    # (Nginx defaults to text/plain without mime.types)
+    default_type application/octet-stream;
+
     # Redirect all HTTP requests to HTTPS
     # Uncomment the following lines if you have SSL certificates
     # return 301 https://$host$request_uri;
@@ -15,6 +19,9 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+
+        # Preserve upstream Content-Type (fixes HTML docs pages showing as text/plain)
+        proxy_pass_header Content-Type;
         
         # Security Headers
         add_header X-Frame-Options "SAMEORIGIN";

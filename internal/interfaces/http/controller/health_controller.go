@@ -1,12 +1,12 @@
 package controller
 
 import (
+	"context"
 	"net/http"
-
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
@@ -23,7 +23,7 @@ type HealthController struct {
 	mu               sync.RWMutex
 	lastCheckTime    time.Time
 	cachedAllHealthy bool
-	cachedChecks     gin.H
+	cachedChecks     map[string]any
 	cacheTTL         time.Duration
 }
 
@@ -36,15 +36,29 @@ func NewHealthController(db database.Database, config *configs.AppConfig) *Healt
 	}
 }
 
+// --- Huma Input/Output types ---
+
+type LiveOutput struct {
+	Body response.Response[map[string]any]
+}
+
+type ReadyOutput struct {
+	Body response.Response[map[string]any] `json:"body"`
+}
+
+// --- Huma handlers ---
+
 // Live is a liveness probe. It returns 200 if the process is running.
 // Use this for Kubernetes livenessProbe or Docker HEALTHCHECK.
 //
 // A failing liveness probe means the process is deadlocked or unrecoverable,
 // and the container should be restarted.
-func (h *HealthController) Live(c *gin.Context) {
-	c.JSON(http.StatusOK, response.NewSuccessResponse("alive", gin.H{
-		"version": version.Version,
-	}))
+func (h *HealthController) Live(_ context.Context, _ *struct{}) (*LiveOutput, error) {
+	return &LiveOutput{
+		Body: response.NewSuccessResponse("alive", map[string]any{
+			"version": version.Version,
+		}),
+	}, nil
 }
 
 // Ready is a readiness probe. It returns 200 only if all critical
@@ -54,20 +68,20 @@ func (h *HealthController) Live(c *gin.Context) {
 //
 // This endpoint checks:
 //   - Database connectivity (SQL ping with 2s timeout)
-func (h *HealthController) Ready(c *gin.Context) {
+func (h *HealthController) Ready(_ context.Context, _ *struct{}) (*ReadyOutput, error) {
 	h.mu.RLock()
 	// If cache is still valid, return immediately (O(1) time, no DB call)
 	if time.Since(h.lastCheckTime) < h.cacheTTL {
 		isHealthy := h.cachedAllHealthy
 		checks := h.cachedChecks
 		h.mu.RUnlock()
-		
+
 		if !isHealthy {
-			c.JSON(http.StatusServiceUnavailable, response.NewSuccessResponse("not ready", checks))
-			return
+			return nil, huma.NewError(http.StatusServiceUnavailable, "not ready")
 		}
-		c.JSON(http.StatusOK, response.NewSuccessResponse("ready", checks))
-		return
+		return &ReadyOutput{
+			Body: response.NewSuccessResponse("ready", checks),
+		}, nil
 	}
 	h.mu.RUnlock()
 
@@ -78,14 +92,14 @@ func (h *HealthController) Ready(c *gin.Context) {
 	// Double-check pattern (another goroutine might have refreshed it while we waited for lock)
 	if time.Since(h.lastCheckTime) < h.cacheTTL {
 		if !h.cachedAllHealthy {
-			c.JSON(http.StatusServiceUnavailable, response.NewSuccessResponse("not ready", h.cachedChecks))
-			return
+			return nil, huma.NewError(http.StatusServiceUnavailable, "not ready")
 		}
-		c.JSON(http.StatusOK, response.NewSuccessResponse("ready", h.cachedChecks))
-		return
+		return &ReadyOutput{
+			Body: response.NewSuccessResponse("ready", h.cachedChecks),
+		}, nil
 	}
 
-	checks := gin.H{}
+	checks := map[string]any{}
 	allHealthy := true
 
 	// Helper to format errors based on environment
@@ -99,13 +113,13 @@ func (h *HealthController) Ready(c *gin.Context) {
 	// Check database connectivity
 	sqlDB, err := h.db.DB().DB()
 	if err != nil {
-		checks["database"] = gin.H{"status": "down", "error": formatErr(err)}
+		checks["database"] = map[string]any{"status": "down", "error": formatErr(err)}
 		allHealthy = false
 	} else if err = sqlDB.Ping(); err != nil {
-		checks["database"] = gin.H{"status": "down", "error": formatErr(err)}
+		checks["database"] = map[string]any{"status": "down", "error": formatErr(err)}
 		allHealthy = false
 	} else {
-		checks["database"] = gin.H{"status": "up"}
+		checks["database"] = map[string]any{"status": "up"}
 	}
 
 	// Update cache
@@ -114,9 +128,10 @@ func (h *HealthController) Ready(c *gin.Context) {
 	h.lastCheckTime = time.Now()
 
 	if !allHealthy {
-		c.JSON(http.StatusServiceUnavailable, response.NewSuccessResponse("not ready", checks))
-		return
+		return nil, huma.NewError(http.StatusServiceUnavailable, "not ready")
 	}
 
-	c.JSON(http.StatusOK, response.NewSuccessResponse("ready", checks))
+	return &ReadyOutput{
+		Body: response.NewSuccessResponse("ready", checks),
+	}, nil
 }
