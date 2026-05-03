@@ -141,10 +141,11 @@ func (app *Application) Initialize() error {
 	// Layer 4 — Controllers (depend on use case interfaces)
 	authCtrl := controller.NewAuthController(authUseCase)
 	userCtrl := controller.NewUserController(userUseCase)
-	healthCtrl := controller.NewHealthController(app.DB, app.Config)
+	infraCtrl := controller.NewInfraController(app.DB, app.Config)
 
-	// Set up routes — receives pre-built objects, no more raw db/config
-	route.SetupRoutes(app.Router, authCtrl, userCtrl, healthCtrl, authenticator, app.Config)
+	// Set up routes — Router holds shared deps, each register method receives its own controller
+	router := route.NewRouter(authenticator, app.Config)
+	router.Setup(app.Router, authCtrl, userCtrl, infraCtrl)
 	return nil
 }
 

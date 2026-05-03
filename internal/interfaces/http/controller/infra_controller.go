@@ -14,8 +14,8 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/pkg/version"
 )
 
-// HealthController handles health check endpoints.
-type HealthController struct {
+// InfraController handles infrastructure endpoints: welcome page, health probes.
+type InfraController struct {
 	db     database.Database
 	config *configs.AppConfig
 
@@ -27,13 +27,25 @@ type HealthController struct {
 	cacheTTL         time.Duration
 }
 
-// NewHealthController creates a new HealthController.
-func NewHealthController(db database.Database, config *configs.AppConfig) *HealthController {
-	return &HealthController{
+// NewInfraController creates a new InfraController.
+func NewInfraController(db database.Database, config *configs.AppConfig) *InfraController {
+	return &InfraController{
 		db:       db,
 		config:   config,
 		cacheTTL: 5 * time.Second, // Max 1 DB ping every 5 seconds
 	}
+}
+
+// Welcome returns basic application info.
+func (h *InfraController) Welcome(c *gin.Context) {
+	data := gin.H{
+		"version": version.Version,
+	}
+	if h.config.Environment != "production" {
+		data["git_commit"] = version.GitCommit
+		data["build_time"] = version.BuildTime
+	}
+	c.JSON(http.StatusOK, response.NewSuccessResponse("Boot Backend Go Clean is running", data))
 }
 
 // Live is a liveness probe. It returns 200 if the process is running.
@@ -41,7 +53,7 @@ func NewHealthController(db database.Database, config *configs.AppConfig) *Healt
 //
 // A failing liveness probe means the process is deadlocked or unrecoverable,
 // and the container should be restarted.
-func (h *HealthController) Live(c *gin.Context) {
+func (h *InfraController) Live(c *gin.Context) {
 	c.JSON(http.StatusOK, response.NewSuccessResponse("alive", gin.H{
 		"version": version.Version,
 	}))
@@ -54,7 +66,7 @@ func (h *HealthController) Live(c *gin.Context) {
 //
 // This endpoint checks:
 //   - Database connectivity (SQL ping with 2s timeout)
-func (h *HealthController) Ready(c *gin.Context) {
+func (h *InfraController) Ready(c *gin.Context) {
 	h.mu.RLock()
 	// If cache is still valid, return immediately (O(1) time, no DB call)
 	if time.Since(h.lastCheckTime) < h.cacheTTL {
