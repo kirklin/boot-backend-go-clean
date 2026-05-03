@@ -8,16 +8,24 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
-	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
-	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/version"
 )
 
-// SetupRoutes configures the routes for the application
-func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppConfig) {
+// SetupRoutes configures the routes for the application.
+// All controllers and the authenticator are pre-built by the Composition Root (app.Initialize)
+// and passed in — this function only wires them to HTTP paths.
+func SetupRoutes(
+	router *gin.Engine,
+	authCtrl *controller.AuthController,
+	userCtrl *controller.UserController,
+	healthCtrl *controller.HealthController,
+	authenticator gateway.Authenticator,
+	config *configs.AppConfig,
+) {
 	if config.RateLimitPerMinute > 0 {
 		limiter := middleware.NewRateLimiter(config.RateLimitPerMinute, time.Minute)
 		router.Use(limiter.LimitMiddleware())
@@ -54,27 +62,16 @@ func SetupRoutes(router *gin.Engine, db database.Database, config *configs.AppCo
 	apiRouter := router.Group("/v1/api")
 
 	// Health check endpoints
-	healthCtrl := controller.NewHealthController(db, config)
 	healthGroup := apiRouter.Group("/health")
 	{
-		healthGroup.GET("", healthCtrl.Live)        // backward compat: /v1/api/health
-		healthGroup.GET("/live", healthCtrl.Live)    // liveness probe: process is running
-		healthGroup.GET("/ready", healthCtrl.Ready)  // readiness probe: DB is reachable
+		healthGroup.GET("", healthCtrl.Live)       // backward compat: /v1/api/health
+		healthGroup.GET("/live", healthCtrl.Live)   // liveness probe: process is running
+		healthGroup.GET("/ready", healthCtrl.Ready) // readiness probe: DB is reachable
 	}
 
-	tokenBlacklist := auth.NewTokenBlacklist()
-	authenticator := auth.NewJWTAuthenticator(
-		config.AccessTokenSecret,
-		config.RefreshTokenSecret,
-		config.JWTIssuer,
-		time.Duration(config.AccessTokenLifetime)*time.Hour,
-		time.Duration(config.RefreshTokenLifetime)*time.Hour,
-		tokenBlacklist,
-	)
-
 	// Setup auth routes
-	NewAuthRouter(db, apiRouter, config, authenticator)
+	NewAuthRouter(apiRouter, authCtrl, authenticator)
 
 	// Setup user routes
-	NewUserRouter(db, apiRouter, config, authenticator)
+	NewUserRouter(apiRouter, userCtrl, authenticator)
 }

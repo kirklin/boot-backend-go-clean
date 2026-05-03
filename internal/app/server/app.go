@@ -10,9 +10,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
+	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
+	"github.com/kirklin/boot-backend-go-clean/internal/usecase"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
@@ -112,8 +115,36 @@ func (app *Application) Initialize() error {
 		logger.GetLogger().Fatalf("failed to auto migrate: %v", err)
 	}
 
-	// Set up routes
-	route.SetupRoutes(app.Router, app.DB, app.Config)
+	// Composition Root: build all dependencies in layer order.
+	// Only app.Initialize knows about concrete implementations;
+	// the route layer receives interfaces and pre-built controllers.
+
+	// Layer 1 — Infrastructure (depends on config/db)
+	tokenBlacklist := auth.NewTokenBlacklist()
+	authenticator := auth.NewJWTAuthenticator(
+		app.Config.AccessTokenSecret,
+		app.Config.RefreshTokenSecret,
+		app.Config.JWTIssuer,
+		time.Duration(app.Config.AccessTokenLifetime)*time.Hour,
+		time.Duration(app.Config.RefreshTokenLifetime)*time.Hour,
+		tokenBlacklist,
+	)
+
+	// Layer 2 — Repositories (depend on db)
+	userRepo := persistence.NewUserRepository(app.DB)
+	txManager := persistence.NewTxManager(app.DB)
+
+	// Layer 3 — Use Cases (depend on interfaces, not concrete types)
+	authUseCase := usecase.NewAuthUseCase(userRepo, authenticator, txManager, app.Config)
+	userUseCase := usecase.NewUserUseCase(userRepo)
+
+	// Layer 4 — Controllers (depend on use case interfaces)
+	authCtrl := controller.NewAuthController(authUseCase)
+	userCtrl := controller.NewUserController(userUseCase)
+	healthCtrl := controller.NewHealthController(app.DB, app.Config)
+
+	// Set up routes — receives pre-built objects, no more raw db/config
+	route.SetupRoutes(app.Router, authCtrl, userCtrl, healthCtrl, authenticator, app.Config)
 	return nil
 }
 

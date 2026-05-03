@@ -3,21 +3,15 @@ package route
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
-
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
-	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/utils"
-	"github.com/kirklin/boot-backend-go-clean/internal/usecase"
-	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 )
 
-func NewUserRouter(db database.Database, group *gin.RouterGroup, config *configs.AppConfig, authenticator gateway.Authenticator) {
-	ur := persistence.NewUserRepository(db)
-	uc := controller.NewUserController(usecase.NewUserUseCase(ur))
-
+// NewUserRouter registers user endpoints.
+// All dependencies are pre-built and injected from the Composition Root (app.Initialize).
+func NewUserRouter(group *gin.RouterGroup, uc *controller.UserController, authenticator gateway.Authenticator) {
 	userRoutes := group.Group("/users")
 	userRoutes.Use(middleware.JWTAuthMiddleware(authenticator))
 	{
