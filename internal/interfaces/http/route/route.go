@@ -9,6 +9,8 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
+	"github.com/kirklin/boot-backend-go-clean/pkg/openapi"
+	"github.com/kirklin/boot-backend-go-clean/pkg/version"
 )
 
 // Router holds shared dependencies that every route group needs.
@@ -45,8 +47,18 @@ func (r *Router) Setup(
 	// Infrastructure routes (root-level: /, /metrics, /health/*)
 	r.registerInfraRoutes(engine, infraCtrl)
 
+	// ── OpenAPI 3.1 spec builder ──────────────────────────────────────
+	spec := openapi.NewSpec("Boot Backend API", version.Version)
+	spec.AddServer("/v1/api", "API Server")
+	spec.AddBearerAuth("bearer")
+
 	// Business API routes (versioned: /v1/api/*)
-	api := engine.Group("/v1/api")
+	api := openapi.NewAPI(engine.Group("/v1/api"), spec)
 	r.registerAuthRoutes(api, authCtrl)
 	r.registerUserRoutes(api, userCtrl)
+
+	// Serve OpenAPI spec + Scalar docs (non-production only)
+	if r.config.Environment != "production" {
+		spec.Mount(engine)
+	}
 }
