@@ -1,15 +1,11 @@
 package controller
 
 import (
-	"net/http"
-	"strconv"
-
-	"github.com/gin-gonic/gin"
+	"context"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
-	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity/response"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
-	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
+	"github.com/kirklin/boot-backend-go-clean/pkg/openapi"
 )
 
 type UserController struct {
@@ -22,64 +18,36 @@ func NewUserController(userUseCase usecase.UserUseCase) *UserController {
 	}
 }
 
-func (c *UserController) GetUser(ctx *gin.Context) {
-	userID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
-		return
-	}
+// ─── Input types ────────────────────────────────────────────────────────────
 
-	user, err := c.userUseCase.GetUserByID(ctx.Request.Context(), userID)
-	if err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to get user", err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User retrieved successfully", user))
+type GetUserInput struct {
+	ID int64 `path:"id"`
 }
 
-func (c *UserController) GetCurrentUser(ctx *gin.Context) {
-	userID, exists := middleware.GetUserIDFromContext(ctx)
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, response.NewErrorResponse("Unauthorized", nil))
-		return
-	}
-
-	user, err := c.userUseCase.GetUserByID(ctx.Request.Context(), userID)
-	if err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to get user", err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse("User retrieved successfully", user))
+type UpdateUserInput struct {
+	ID   int64       `path:"id"`
+	Body entity.User
 }
 
-func (c *UserController) UpdateUser(ctx *gin.Context) {
-	var user entity.User
-	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid input", err))
-		return
-	}
-
-	if err := c.userUseCase.UpdateUser(ctx.Request.Context(), &user); err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to update user", err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("User updated successfully", nil))
+type DeleteUserInput struct {
+	ID int64 `path:"id"`
 }
 
-func (c *UserController) DeleteUser(ctx *gin.Context) {
-	userID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, response.NewErrorResponse("Invalid user ID", err))
-		return
-	}
+// ─── Handlers ───────────────────────────────────────────────────────────────
 
-	if err := c.userUseCase.SoftDeleteUser(ctx.Request.Context(), userID); err != nil {
-		ctx.JSON(response.HTTPCodeFromError(err, http.StatusInternalServerError), response.NewErrorResponse("Failed to delete user", err))
-		return
-	}
+func (c *UserController) GetUser(ctx context.Context, in *GetUserInput) (*entity.User, error) {
+	return c.userUseCase.GetUserByID(ctx, in.ID)
+}
 
-	ctx.JSON(http.StatusOK, response.NewSuccessResponse[any]("User deleted successfully", nil))
+func (c *UserController) GetCurrentUser(ctx context.Context, _ *openapi.Empty) (*entity.User, error) {
+	userID := openapi.MustUserID(ctx)
+	return c.userUseCase.GetUserByID(ctx, userID)
+}
+
+func (c *UserController) UpdateUser(ctx context.Context, in *UpdateUserInput) (*openapi.Empty, error) {
+	return nil, c.userUseCase.UpdateUser(ctx, &in.Body)
+}
+
+func (c *UserController) DeleteUser(ctx context.Context, in *DeleteUserInput) (*openapi.Empty, error) {
+	return nil, c.userUseCase.SoftDeleteUser(ctx, in.ID)
 }

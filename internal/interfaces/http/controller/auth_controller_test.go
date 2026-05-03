@@ -16,6 +16,7 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	testmock "github.com/kirklin/boot-backend-go-clean/internal/testutil/mock"
+	"github.com/kirklin/boot-backend-go-clean/pkg/openapi"
 )
 
 func TestMain(m *testing.M) {
@@ -23,12 +24,26 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// setupAuthRouter wires the typed handlers through the openapi framework,
+// so tests exercise the full binding → handler → response pipeline.
 func setupAuthRouter(ctrl *AuthController) *gin.Engine {
+	spec := openapi.NewSpec("test", "0.0.0")
 	r := gin.New()
-	r.POST("/register", ctrl.Register)
-	r.POST("/login", ctrl.Login)
-	r.POST("/refresh", ctrl.RefreshToken)
-	r.POST("/logout", ctrl.Logout)
+	api := openapi.NewAPI(r.Group(""), spec)
+
+	openapi.Post[RegisterInput, entity.RegisterResponse](api, "/register", ctrl.Register,
+		openapi.Status(http.StatusCreated),
+		openapi.Message("User registered successfully"),
+	)
+	openapi.Post[LoginInput, entity.LoginResponse](api, "/login", ctrl.Login,
+		openapi.Message("Login successful"),
+	)
+	openapi.Post[RefreshInput, entity.RefreshTokenResponse](api, "/refresh", ctrl.RefreshToken,
+		openapi.Message("Token refreshed successfully"),
+	)
+	openapi.Post[LogoutInput, openapi.Empty](api, "/logout", ctrl.Logout,
+		openapi.Message("Logged out successfully"),
+	)
 	return r
 }
 

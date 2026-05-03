@@ -15,13 +15,23 @@ import (
 	domainerrors "github.com/kirklin/boot-backend-go-clean/internal/domain/errors"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	testmock "github.com/kirklin/boot-backend-go-clean/internal/testutil/mock"
+	"github.com/kirklin/boot-backend-go-clean/pkg/openapi"
 )
 
 func setupUserRouter(ctrl *UserController) *gin.Engine {
+	spec := openapi.NewSpec("test", "0.0.0")
 	r := gin.New()
-	r.GET("/users/:id", ctrl.GetUser)
-	r.PUT("/users/:id", ctrl.UpdateUser)
-	r.DELETE("/users/:id", ctrl.DeleteUser)
+	api := openapi.NewAPI(r.Group(""), spec)
+
+	openapi.Get[GetUserInput, entity.User](api, "/users/:id", ctrl.GetUser,
+		openapi.Message("User retrieved successfully"),
+	)
+	openapi.Put[UpdateUserInput, openapi.Empty](api, "/users/:id", ctrl.UpdateUser,
+		openapi.Message("User updated successfully"),
+	)
+	openapi.Delete[DeleteUserInput, openapi.Empty](api, "/users/:id", ctrl.DeleteUser,
+		openapi.Message("User deleted successfully"),
+	)
 	return r
 }
 
@@ -169,13 +179,37 @@ func TestUserController_DeleteUser_InvalidID(t *testing.T) {
 // ─── GetCurrentUser ───────────────────────────────────────────────────────────
 
 func setupCurrentUserRouter(ctrl *UserController) *gin.Engine {
+	spec := openapi.NewSpec("test", "0.0.0")
 	r := gin.New()
-	r.GET("/me", func(c *gin.Context) {
-		// Simulate JWT middleware setting user ID
+	api := openapi.NewAPI(r.Group(""), spec)
+
+	// Simulate JWT middleware that sets user ID in context
+	fakeJWT := func(c *gin.Context) {
 		c.Set(middleware.ContextKeyUserID, int64(42))
 		c.Next()
-	}, ctrl.GetCurrentUser)
-	r.GET("/me-noauth", ctrl.GetCurrentUser) // Without user context
+	}
+
+	openapi.Get[openapi.Empty, entity.User](api, "/me", ctrl.GetCurrentUser,
+		openapi.Middleware(fakeJWT),
+		openapi.Message("User retrieved successfully"),
+	)
+
+	// For testing the no-auth case — MustUserID will panic, recover it.
+	r.GET("/me-noauth", func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
+			}
+		}()
+		ctx := openapi.TestContext(c)
+		result, err := ctrl.GetCurrentUser(ctx, &openapi.Empty{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
+
 	return r
 }
 

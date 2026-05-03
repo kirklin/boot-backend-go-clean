@@ -44,13 +44,14 @@ func (r *Router) Setup(
 	engine.Use(middleware.CORSMiddleware())
 	engine.Use(middleware.MetricsMiddleware())
 
-	// Infrastructure routes (root-level: /, /metrics, /health/*)
-	r.registerInfraRoutes(engine, infraCtrl)
-
 	// ── OpenAPI 3.1 spec builder ──────────────────────────────────────
 	spec := openapi.NewSpec("Boot Backend API", version.Version)
 	spec.AddServer("/v1/api", "API Server")
 	spec.AddBearerAuth("bearer")
+
+	// Infrastructure routes (root-level: /, /metrics, /health/*)
+	infraAPI := openapi.NewAPI(engine.Group(""), spec)
+	r.registerInfraRoutes(engine, infraAPI, infraCtrl)
 
 	// Business API routes (versioned: /v1/api/*)
 	api := openapi.NewAPI(engine.Group("/v1/api"), spec)

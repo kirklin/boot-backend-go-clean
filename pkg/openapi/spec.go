@@ -152,21 +152,22 @@ func (s *Spec) Build() ([]byte, error) {
 			opObj["parameters"] = params
 		}
 
-		// Request body
-		reqRef := sg.schemaRef(reg.reqType)
-		if reqRef != nil {
-			opObj["requestBody"] = map[string]any{
-				"required": true,
-				"content": map[string]any{
-					"application/json": map[string]any{
-						"schema": reqRef,
+		// Request body (nil reqType means no body — e.g. path-only params)
+		if reg.reqType != nil {
+			reqRef := sg.schemaRef(reg.reqType)
+			if reqRef != nil {
+				opObj["requestBody"] = map[string]any{
+					"required": true,
+					"content": map[string]any{
+						"application/json": map[string]any{
+							"schema": reqRef,
+						},
 					},
-				},
+				}
 			}
 		}
 
 		// Response
-		respRef := sg.schemaRef(reg.respType)
 		statusCode := op.status
 		if statusCode == 0 {
 			statusCode = 200
@@ -176,18 +177,27 @@ func (s *Spec) Build() ([]byte, error) {
 			statusStr = "Success"
 		}
 
-		responseSchema := s.buildResponseSchema(respRef)
-		responses := map[string]any{
-			statusCodeStr(statusCode): map[string]any{
-				"description": statusStr,
-				"content": map[string]any{
-					"application/json": map[string]any{
-						"schema": responseSchema,
+		if reg.respType != nil {
+			respRef := sg.schemaRef(reg.respType)
+			responseSchema := s.buildResponseSchema(respRef)
+			opObj["responses"] = map[string]any{
+				statusCodeStr(statusCode): map[string]any{
+					"description": statusStr,
+					"content": map[string]any{
+						"application/json": map[string]any{
+							"schema": responseSchema,
+						},
 					},
 				},
-			},
+			}
+		} else {
+			// Raw handlers — just a description, no schema
+			opObj["responses"] = map[string]any{
+				statusCodeStr(statusCode): map[string]any{
+					"description": statusStr,
+				},
+			}
 		}
-		opObj["responses"] = responses
 
 		// Security
 		if len(op.security) > 0 {
