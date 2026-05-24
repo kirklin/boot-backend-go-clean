@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/ai"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
@@ -26,10 +27,12 @@ import (
 
 // Application holds the core components of the application
 type Application struct {
-	Config     *configs.AppConfig
-	Router     *gin.Engine
-	DB         database.Database
-	httpServer *http.Server
+	Config        *configs.AppConfig
+	Router        *gin.Engine
+	DB            database.Database
+	httpServer    *http.Server
+	aiProvider    *ai.Provider // optional – initialised when AI_ENABLED=true
+	langfuseFlush func()       // optional – flushes pending Langfuse traces on shutdown
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -146,6 +149,37 @@ func (app *Application) Initialize() error {
 	// Set up routes — Router holds shared deps, each register method receives its own controller
 	router := route.NewRouter(authenticator, app.Config)
 	router.Setup(app.Router, authCtrl, userCtrl, infraCtrl)
+
+	// ── Langfuse Observability (optional, independent of AI) ────────────
+	if app.Config.LangfuseEnabled {
+		flush, err := ai.InitLangfuse(&ai.LangfuseConfig{
+			Host:      app.Config.LangfuseHost,
+			PublicKey: app.Config.LangfusePublicKey,
+			SecretKey: app.Config.LangfuseSecretKey,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to init langfuse: %w", err)
+		}
+		app.langfuseFlush = flush
+
+		logger.GetLogger().Info("Langfuse tracing enabled")
+	}
+
+	// ── AI Infrastructure (optional) ────────────────────────────────────
+	if app.Config.AIEnabled {
+		provider, err := ai.NewProvider(context.Background(), &ai.ProviderConfig{
+			Model:   app.Config.AIModel,
+			APIKey:  app.Config.AIAPIKey,
+			BaseURL: app.Config.AIBaseURL,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to init AI provider: %w", err)
+		}
+		app.aiProvider = provider
+		logger.GetLogger().Infof("AI infrastructure initialised (model=%s, langfuse=%v)",
+			app.Config.AIModel, app.Config.LangfuseEnabled)
+	}
+
 	return nil
 }
 
@@ -223,6 +257,24 @@ func (app *Application) Run(ctx context.Context) error {
 // shutdown closes all infrastructure resources.
 func (app *Application) shutdown() {
 	log := logger.GetLogger()
+
+	// Flush Langfuse traces before closing AI provider so that
+	// any in-flight trace data is uploaded.
+	if app.langfuseFlush != nil {
+		log.Info("Flushing Langfuse traces...")
+		app.langfuseFlush()
+		log.Info("Langfuse traces flushed")
+	}
+
+	if app.aiProvider != nil {
+		log.Info("Closing AI provider...")
+		if err := app.aiProvider.Close(); err != nil {
+			log.Errorf("Error closing AI provider: %v", err)
+		} else {
+			log.Info("AI provider closed")
+		}
+	}
+
 	if app.DB != nil {
 		log.Info("Closing database connection...")
 		if err := app.DB.Close(); err != nil {

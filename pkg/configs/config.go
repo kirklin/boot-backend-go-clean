@@ -36,6 +36,16 @@ type AppConfig struct {
 	SnowflakeEpoch       string `mapstructure:"SNOWFLAKE_EPOCH"`
 	SnowflakeMachineBits int    `mapstructure:"SNOWFLAKE_MACHINE_BITS"`
 	SnowflakeStepBits    int    `mapstructure:"SNOWFLAKE_STEP_BITS"`
+	// AI / LLM — generic naming; the concrete framework (Eino) is an implementation detail.
+	AIEnabled bool   `mapstructure:"AI_ENABLED"` // Master switch, default false
+	AIModel   string `mapstructure:"AI_MODEL"`   // e.g. gpt-4o, deepseek-chat
+	AIAPIKey  string `mapstructure:"AI_API_KEY"`
+	AIBaseURL string `mapstructure:"AI_BASE_URL"` // Optional, for OpenAI-compatible endpoints
+	// Langfuse — LLM observability
+	LangfuseEnabled   bool   `mapstructure:"LANGFUSE_ENABLED"` // Master switch, default false
+	LangfuseHost      string `mapstructure:"LANGFUSE_HOST"`
+	LangfusePublicKey string `mapstructure:"LANGFUSE_PUBLIC_KEY"`
+	LangfuseSecretKey string `mapstructure:"LANGFUSE_SECRET_KEY"`
 }
 
 // ServerAddress returns the formatted server address

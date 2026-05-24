@@ -32,10 +32,11 @@ services:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-boot}_redis
     restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -80,7 +81,8 @@ services:
       /bin/sh -c "
         mc alias set local http://minio:$${MINIO_PORT} $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY};
         mc mb --ignore-existing local/$${MINIO_BUCKET};
-        echo '✅ MinIO 初始化完成：存储桶 '$${MINIO_BUCKET}' 已就绪';
+        mc mb --ignore-existing local/langfuse;
+        echo '✅ MinIO 初始化完成：存储桶 '$${MINIO_BUCKET}', langfuse 已就绪';
         exit 0;
       "
     networks:
@@ -97,7 +99,9 @@ services:
     environment:
       DB_HOST: postgres
       REDIS_ADDR: redis:${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       MINIO_ENDPOINT: minio:${MINIO_PORT:-9000}
+      LANGFUSE_HOST: http://langfuse:3000
     volumes:
       - ./.env:/app/.env:ro
     healthcheck:
@@ -188,6 +192,101 @@ services:
     networks:
       - app-network
 
+  ####################### LANGFUSE (LLM Observability) #######################
+  langfuse-db:
+    image: postgres:18
+    container_name: ${COMPOSE_PROJECT_NAME:-boot}_langfuse_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${LANGFUSE_DB_USER:-langfuse}
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse}
+      POSTGRES_DB: ${LANGFUSE_DB_NAME:-langfuse}
+      PGDATA: /data/postgres
+    volumes:
+      - langfuse_db_data:/data/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LANGFUSE_DB_USER:-langfuse} -d ${LANGFUSE_DB_NAME:-langfuse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    container_name: ${COMPOSE_PROJECT_NAME:-boot}_langfuse_ch
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: ${LANGFUSE_CH_DB:-default}
+      CLICKHOUSE_USER: ${LANGFUSE_CH_USER:-default}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CH_PASSWORD:?LANGFUSE_CH_PASSWORD is required}
+    volumes:
+      - langfuse_ch_data:/var/lib/clickhouse
+      - langfuse_ch_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  langfuse:
+    image: langfuse/langfuse:3
+    container_name: ${COMPOSE_PROJECT_NAME:-boot}_langfuse
+    restart: unless-stopped
+    environment: &langfuse-env-deploy
+      DATABASE_URL: postgresql://${LANGFUSE_DB_USER:-langfuse}:${LANGFUSE_DB_PASSWORD:-langfuse}@langfuse-db:5432/${LANGFUSE_DB_NAME:-langfuse}
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_USER: ${LANGFUSE_CH_USER:-default}
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CH_PASSWORD:?LANGFUSE_CH_PASSWORD is required}
+      CLICKHOUSE_DB: ${LANGFUSE_CH_DB:-default}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:${MINIO_PORT:-9000}
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minioadmin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      NEXTAUTH_URL: ${LANGFUSE_NEXTAUTH_URL:-http://localhost:3100}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET is required}
+      SALT: ${LANGFUSE_SALT:?LANGFUSE_SALT is required}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?LANGFUSE_ENCRYPTION_KEY is required}
+      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY_ENABLED:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${LANGFUSE_PORT:-3100}:3000"
+    depends_on: &langfuse-deps-deploy
+      langfuse-db:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/public/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - app-network
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: ${COMPOSE_PROJECT_NAME:-boot}_langfuse_worker
+    restart: unless-stopped
+    environment:
+      <<: *langfuse-env-deploy
+    depends_on:
+      <<: *langfuse-deps-deploy
+    networks:
+      - app-network
 volumes:
   db_data:
     driver: local
@@ -198,6 +297,12 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  langfuse_db_data:
+    driver: local
+  langfuse_ch_data:
+    driver: local
+  langfuse_ch_logs:
     driver: local
 
 networks:
