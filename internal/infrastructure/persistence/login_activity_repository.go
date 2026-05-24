@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -40,4 +41,11 @@ func (r *loginActivityRepository) FindLatestByUserID(ctx context.Context, userID
 		return nil, err
 	}
 	return dto.ConvertToEntity(), nil
+}
+
+func (r *loginActivityRepository) DeleteBefore(ctx context.Context, before time.Time) (int64, error) {
+	result := dbFromContext(ctx, r.db).
+		Where("login_at < ?", before).
+		Delete(&model.LoginActivityDTO{})
+	return result.RowsAffected, result.Error
 }

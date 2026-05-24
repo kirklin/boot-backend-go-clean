@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/entity"
 )
@@ -14,4 +15,8 @@ type LoginActivityRepository interface {
 	// FindLatestByUserID returns the most recent login record for a user.
 	// Returns (nil, nil) if no record is found.
 	FindLatestByUserID(ctx context.Context, userID int64) (*entity.LoginActivity, error)
+
+	// DeleteBefore removes all login activity records older than the given time.
+	// Returns the number of deleted records.
+	DeleteBefore(ctx context.Context, before time.Time) (int64, error)
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/ai"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/geoip"
@@ -36,6 +37,7 @@ type Application struct {
 	geoIPResolver gateway.GeoIPResolver // optional – initialised when GeoIP data files are available
 	aiProvider    *ai.Provider          // optional – initialised when AI_ENABLED=true
 	langfuseFlush func()                // optional – flushes pending Langfuse traces on shutdown
+	stopCleanup   chan struct{}         // signals the login activity cleanup goroutine to stop
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -193,6 +195,11 @@ func (app *Application) Initialize() error {
 			app.Config.AIModel, app.Config.LangfuseEnabled)
 	}
 
+	// ── Login Activity Cleanup (optional) ───────────────────────────────
+	if app.Config.LoginActivityEnabled && app.Config.LoginActivityRetentionDays > 0 {
+		app.startLoginActivityCleanup(loginActivityRepo)
+	}
+
 	return nil
 }
 
@@ -305,6 +312,12 @@ func (app *Application) shutdown() {
 		}
 	}
 
+	if app.stopCleanup != nil {
+		log.Info("Stopping login activity cleanup...")
+		close(app.stopCleanup)
+		log.Info("Login activity cleanup stopped")
+	}
+
 	if app.geoIPResolver != nil {
 		log.Info("Closing GeoIP resolver...")
 		if err := app.geoIPResolver.Close(); err != nil {
@@ -321,6 +334,47 @@ func (app *Application) shutdown() {
 		} else {
 			log.Info("Database connection closed")
 		}
+	}
+}
+
+// startLoginActivityCleanup runs a background goroutine that periodically
+// deletes login activity records older than the configured retention period.
+// Runs once immediately on startup, then every 24 hours.
+func (app *Application) startLoginActivityCleanup(repo repository.LoginActivityRepository) {
+	app.stopCleanup = make(chan struct{})
+	log := logger.GetLogger()
+	retention := time.Duration(app.Config.LoginActivityRetentionDays) * 24 * time.Hour
+
+	log.Infof("Login activity cleanup enabled (retention=%d days)", app.Config.LoginActivityRetentionDays)
+
+	go func() {
+		// Run cleanup once on startup
+		app.cleanupLoginActivities(repo, retention)
+
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				app.cleanupLoginActivities(repo, retention)
+			case <-app.stopCleanup:
+				return
+			}
+		}
+	}()
+}
+
+func (app *Application) cleanupLoginActivities(repo repository.LoginActivityRepository, retention time.Duration) {
+	log := logger.GetLogger()
+	before := time.Now().Add(-retention)
+	deleted, err := repo.DeleteBefore(context.Background(), before)
+	if err != nil {
+		log.Errorf("Login activity cleanup failed: %v", err)
+		return
+	}
+	if deleted > 0 {
+		log.Infof("Login activity cleanup: deleted %d records older than %s", deleted, before.Format(time.DateOnly))
 	}
 }
 

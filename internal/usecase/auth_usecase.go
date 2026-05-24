@@ -178,8 +178,9 @@ func (a *authUseCase) Logout(ctx context.Context, req *entity.LogoutRequest) err
 
 // recordLoginActivity records a login event with IP geolocation.
 // This is non-blocking: failures are logged but do not affect the login result.
+// Controlled by LOGIN_ACTIVITY_ENABLED config (default true).
 func (a *authUseCase) recordLoginActivity(ctx context.Context, userID int64) {
-	if a.loginActivityRepo == nil {
+	if !a.config.LoginActivityEnabled || a.loginActivityRepo == nil {
 		return
 	}
 

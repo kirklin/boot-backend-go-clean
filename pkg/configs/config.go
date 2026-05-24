@@ -46,6 +46,9 @@ type AppConfig struct {
 	LangfuseHost      string `mapstructure:"LANGFUSE_HOST"`
 	LangfusePublicKey string `mapstructure:"LANGFUSE_PUBLIC_KEY"`
 	LangfuseSecretKey string `mapstructure:"LANGFUSE_SECRET_KEY"`
+	// Login Activity — IP geolocation and audit logging
+	LoginActivityEnabled       bool `mapstructure:"LOGIN_ACTIVITY_ENABLED"`        // Enable login activity recording, default true
+	LoginActivityRetentionDays int  `mapstructure:"LOGIN_ACTIVITY_RETENTION_DAYS"` // Auto-cleanup records older than N days, default 180 (6 months), 0 = keep forever
 }
 
 // ServerAddress returns the formatted server address
@@ -103,6 +106,10 @@ func LoadConfig() (*AppConfig, error) {
 
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv() // Allow true environment variables (e.g., from Docker) to override .env configs
+
+	// Sensible defaults — can be overridden by .env or env vars
+	viper.SetDefault("LOGIN_ACTIVITY_ENABLED", true)
+	viper.SetDefault("LOGIN_ACTIVITY_RETENTION_DAYS", 180) // 6 months
 
 	// Ignore error if .env doesn't exist, as we might rely entirely on env vars
 	_ = viper.ReadInConfig()
