@@ -107,6 +107,7 @@ jobs:
             cd ${{ env.DEPLOY_PATH }}
             cp docker/docker-compose.deploy.yaml docker-compose.yaml
             cp -r docker/nginx .
+            mkdir -p logs && chown -R 65532:65532 logs
             docker compose pull
             docker compose up -d --remove-orphans --wait
             docker image prune -f
