@@ -14,21 +14,34 @@ import (
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/usecase"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
+	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
+	"github.com/kirklin/boot-backend-go-clean/pkg/openapi"
 )
 
 type authUseCase struct {
-	userRepo      repository.UserRepository
-	authenticator gateway.Authenticator
-	txManager     repository.TxManager
-	config        *configs.AppConfig
+	userRepo          repository.UserRepository
+	authenticator     gateway.Authenticator
+	txManager         repository.TxManager
+	loginActivityRepo repository.LoginActivityRepository // optional — may be nil in tests
+	geoIPResolver     gateway.GeoIPResolver              // optional — may be nil if data files missing
+	config            *configs.AppConfig
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository, authenticator gateway.Authenticator, txManager repository.TxManager, config *configs.AppConfig) usecase.AuthUseCase {
+func NewAuthUseCase(
+	userRepo repository.UserRepository,
+	authenticator gateway.Authenticator,
+	txManager repository.TxManager,
+	loginActivityRepo repository.LoginActivityRepository,
+	geoIPResolver gateway.GeoIPResolver,
+	config *configs.AppConfig,
+) usecase.AuthUseCase {
 	return &authUseCase{
-		userRepo:      userRepo,
-		authenticator: authenticator,
-		txManager:     txManager,
-		config:        config,
+		userRepo:          userRepo,
+		authenticator:     authenticator,
+		txManager:         txManager,
+		loginActivityRepo: loginActivityRepo,
+		geoIPResolver:     geoIPResolver,
+		config:            config,
 	}
 }
 
@@ -103,6 +116,9 @@ func (a *authUseCase) Login(ctx context.Context, req *entity.LoginRequest) (*ent
 		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
+	// Record login activity (non-blocking: failure only logs, does not affect login)
+	a.recordLoginActivity(ctx, user.ID)
+
 	return &entity.LoginResponse{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
@@ -158,4 +174,36 @@ func (a *authUseCase) Logout(ctx context.Context, req *entity.LogoutRequest) err
 	}
 
 	return nil
+}
+
+// recordLoginActivity records a login event with IP geolocation.
+// This is non-blocking: failures are logged but do not affect the login result.
+func (a *authUseCase) recordLoginActivity(ctx context.Context, userID int64) {
+	if a.loginActivityRepo == nil {
+		return
+	}
+
+	ip := openapi.ClientIP(ctx)
+	ua := openapi.UserAgent(ctx)
+
+	// Resolve IP to geographic location
+	var geo gateway.GeoLocation
+	if a.geoIPResolver != nil {
+		geo = a.geoIPResolver.Resolve(ip)
+	}
+
+	activity := &entity.LoginActivity{
+		UserID:    userID,
+		LoginAt:   time.Now(),
+		IPAddress: ip,
+		UserAgent: ua,
+		Country:   geo.Country,
+		Province:  geo.Province,
+		City:      geo.City,
+		ISP:       geo.ISP,
+	}
+
+	if err := a.loginActivityRepo.Create(ctx, activity); err != nil {
+		logger.GetLogger().Warnf("Failed to record login activity for user %d: %v", userID, err)
+	}
 }

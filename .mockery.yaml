@@ -20,10 +20,12 @@ packages:
   github.com/kirklin/boot-backend-go-clean/internal/domain/repository:
     interfaces:
       UserRepository:
+      LoginActivityRepository:
       TxManager:
   github.com/kirklin/boot-backend-go-clean/internal/domain/gateway:
     interfaces:
       Authenticator:
+      GeoIPResolver:
   github.com/kirklin/boot-backend-go-clean/internal/domain/usecase:
     interfaces:
       AuthUseCase:

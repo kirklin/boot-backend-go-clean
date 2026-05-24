@@ -3,6 +3,10 @@ server {
     listen  [::]:${GATEWAY_PORT};
     server_name _;
 
+    # Allow large cookies and Cloudflare headers (prevents 400 Bad Request)
+    large_client_header_buffers 4 32k;
+    client_header_buffer_size 8k;
+
     # Redirect all HTTP requests to HTTPS
     # Uncomment the following lines if you have SSL certificates
     # return 301 https://$host$request_uri;
@@ -15,7 +19,13 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
-        
+
+        # Client IP forwarding — essential for GeoIP resolution and rate limiting.
+        # Without these headers, the Go app only sees the Docker gateway IP.
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
         # Security Headers
         add_header X-Frame-Options "SAMEORIGIN";
         add_header X-XSS-Protection "1; mode=block";
@@ -35,17 +45,21 @@ server {
 #     ssl_prefer_server_ciphers on;
 #     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
 #
+#     # Allow large cookies and Cloudflare headers
+#     large_client_header_buffers 4 32k;
+#     client_header_buffer_size 8k;
+#
 #     location / {
-#         proxy_pass http://boot_app:${APP_PORT};
+#         proxy_pass http://api:${SERVER_PORT};
 #         proxy_http_version 1.1;
 #         proxy_set_header Upgrade $http_upgrade;
 #         proxy_set_header Connection 'upgrade';
 #         proxy_set_header Host $host;
 #         proxy_cache_bypass $http_upgrade;
-#         
+#
 #         # Client IP Headers
 #         proxy_set_header X-Real-IP $remote_addr;
-#         proxy_set_header X-Forwarded-For $proxy_addrs;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 #         proxy_set_header X-Forwarded-Proto $scheme;
 #     }
 # }

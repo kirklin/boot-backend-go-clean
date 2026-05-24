@@ -10,8 +10,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/ai"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/geoip"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
@@ -31,8 +33,9 @@ type Application struct {
 	Router        *gin.Engine
 	DB            database.Database
 	httpServer    *http.Server
-	aiProvider    *ai.Provider // optional – initialised when AI_ENABLED=true
-	langfuseFlush func()       // optional – flushes pending Langfuse traces on shutdown
+	geoIPResolver gateway.GeoIPResolver // optional – initialised when GeoIP data files are available
+	aiProvider    *ai.Provider          // optional – initialised when AI_ENABLED=true
+	langfuseFlush func()                // optional – flushes pending Langfuse traces on shutdown
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -133,12 +136,22 @@ func (app *Application) Initialize() error {
 		tokenBlacklist,
 	)
 
+	// GeoIP Resolver (optional — graceful degradation if data files are missing)
+	resolver, err := geoip.NewResolver("data/ip2region_v4.xdb", "data/ip2region_v6.xdb")
+	if err != nil {
+		logger.GetLogger().Warnf("GeoIP: %v (IP geolocation disabled)", err)
+	} else {
+		app.geoIPResolver = resolver
+		logger.GetLogger().Info("GeoIP resolver initialized")
+	}
+
 	// Layer 2 — Repositories (depend on db)
 	userRepo := persistence.NewUserRepository(app.DB)
+	loginActivityRepo := persistence.NewLoginActivityRepository(app.DB)
 	txManager := persistence.NewTxManager(app.DB)
 
 	// Layer 3 — Use Cases (depend on interfaces, not concrete types)
-	authUseCase := usecase.NewAuthUseCase(userRepo, authenticator, txManager, app.Config)
+	authUseCase := usecase.NewAuthUseCase(userRepo, authenticator, txManager, loginActivityRepo, app.geoIPResolver, app.Config)
 	userUseCase := usecase.NewUserUseCase(userRepo)
 
 	// Layer 4 — Controllers (depend on use case interfaces)
@@ -200,7 +213,24 @@ const shutdownGracePeriod = 30 * time.Second
 func (app *Application) Run(ctx context.Context) error {
 	log := logger.GetLogger()
 
-	if err := app.Router.SetTrustedProxies(nil); err != nil {
+	// Configure proxy trust for correct client IP detection.
+	// Request chain: Client → (Cloudflare) → Nginx → Docker → Go App
+	//
+	// RemoteIPHeaders defines the priority order for reading the real client IP.
+	// If behind Cloudflare, CF-Connecting-IP is the most reliable source.
+	// If not behind Cloudflare, X-Real-IP / X-Forwarded-For from nginx will be used.
+	app.Router.RemoteIPHeaders = []string{"CF-Connecting-IP", "X-Real-IP", "X-Forwarded-For"}
+
+	// Trust private network CIDRs (Docker bridge, Docker Desktop, localhost).
+	// This allows Gin's c.ClientIP() to read the real IP from the headers above
+	// instead of always returning the nginx/Docker gateway IP.
+	if err := app.Router.SetTrustedProxies([]string{
+		"10.0.0.0/8",     // Private Class A
+		"172.16.0.0/12",  // Private Class B (includes Docker bridge 172.x.x.x)
+		"192.168.0.0/16", // Private Class C (includes Docker Desktop 192.168.65.x)
+		"127.0.0.0/8",    // Localhost
+		"fc00::/7",       // IPv6 unique local addresses
+	}); err != nil {
 		return err
 	}
 
@@ -254,7 +284,7 @@ func (app *Application) Run(ctx context.Context) error {
 	return nil
 }
 
-// shutdown closes all infrastructure resources.
+// shutdown closes all infrastructure resources in reverse initialization order.
 func (app *Application) shutdown() {
 	log := logger.GetLogger()
 
@@ -272,6 +302,15 @@ func (app *Application) shutdown() {
 			log.Errorf("Error closing AI provider: %v", err)
 		} else {
 			log.Info("AI provider closed")
+		}
+	}
+
+	if app.geoIPResolver != nil {
+		log.Info("Closing GeoIP resolver...")
+		if err := app.geoIPResolver.Close(); err != nil {
+			log.Errorf("Error closing GeoIP resolver: %v", err)
+		} else {
+			log.Info("GeoIP resolver closed")
 		}
 	}
 

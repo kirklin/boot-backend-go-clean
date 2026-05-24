@@ -8,7 +8,7 @@ FROM golang:1.26-alpine
 RUN go install github.com/air-verse/air@latest
 
 # 安装调试和开发常用工具
-RUN apk --no-cache add ca-certificates tzdata curl
+RUN apk --no-cache add ca-certificates tzdata curl git
 
 WORKDIR /app
 
@@ -16,8 +16,18 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+# 下载 GeoIP 数据文件（ip2region）
+# 使用 sparse checkout 仅拉取 data 目录，减少下载量
+RUN git clone --depth 1 --filter=blob:none --sparse \
+      https://github.com/lionsoul2014/ip2region.git /tmp/ip2region && \
+    cd /tmp/ip2region && git sparse-checkout set data && \
+    mkdir -p /geoip && \
+    cp data/ip2region_v4.xdb /geoip/ && \
+    cp data/ip2region_v6.xdb /geoip/ && \
+    rm -rf /tmp/ip2region
+
 # 源代码通过 volume 挂载，不 COPY
 # 这样修改代码后 air 能立即检测到变化
 
-# air 使用项目根目录的 .air.toml 配置
-CMD ["air", "-c", ".air.toml"]
+# 启动时先确保 data/ 目录有 xdb 文件，再启动 air
+CMD ["sh", "-c", "mkdir -p /app/data && cp -n /geoip/*.xdb /app/data/ && air -c .air.toml"]

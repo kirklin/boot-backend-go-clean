@@ -14,6 +14,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/kirklin/go-swd v0.0.3
 	github.com/kirklin/snowflake v0.1.0
+	github.com/lionsoul2014/ip2region/binding/golang v0.0.0-20260519114956-82a73fa60d8c
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.35.1
 	github.com/spf13/viper v1.21.0

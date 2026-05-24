@@ -13,6 +13,7 @@ import (
 func AutoMigrate(db database.Database) error {
 	return db.DB().AutoMigrate(
 		&model.UserDTO{},
+		&model.LoginActivityDTO{},
 		// Add new models here:
 		// &model.PostDTO{},
 	)

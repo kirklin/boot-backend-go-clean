@@ -73,7 +73,7 @@ func (h *InfraController) Ready(c *gin.Context) {
 		isHealthy := h.cachedAllHealthy
 		checks := h.cachedChecks
 		h.mu.RUnlock()
-		
+
 		if !isHealthy {
 			c.JSON(http.StatusServiceUnavailable, response.NewSuccessResponse("not ready", checks))
 			return

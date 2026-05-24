@@ -19,10 +19,12 @@ import (
 
 func newAuthUseCase(repo *testmock.MockUserRepository, auth *testmock.MockAuthenticator) *authUseCase {
 	return &authUseCase{
-		userRepo:      repo,
-		authenticator: auth,
-		txManager:     testmock.NewPassthroughTxManager(),
-		config:        &configs.AppConfig{RefreshTokenLifetime: 24},
+		userRepo:          repo,
+		authenticator:     auth,
+		txManager:         testmock.NewPassthroughTxManager(),
+		loginActivityRepo: nil, // optional — not tested here
+		geoIPResolver:     nil, // optional — not tested here
+		config:            &configs.AppConfig{RefreshTokenLifetime: 24},
 	}
 }
 

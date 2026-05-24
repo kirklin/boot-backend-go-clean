@@ -60,3 +60,23 @@ func UserID(ctx context.Context) (int64, bool) {
 func TestContext(c *gin.Context) context.Context {
 	return withGinContext(c)
 }
+
+// ClientIP extracts the real client IP address from context.
+// Uses Gin's ClientIP() which handles X-Forwarded-For, X-Real-IP,
+// and CF-Connecting-IP based on trusted proxy configuration.
+func ClientIP(ctx context.Context) string {
+	gc := GinContext(ctx)
+	if gc == nil {
+		return ""
+	}
+	return gc.ClientIP()
+}
+
+// UserAgent extracts the client User-Agent string from context.
+func UserAgent(ctx context.Context) string {
+	gc := GinContext(ctx)
+	if gc == nil {
+		return ""
+	}
+	return gc.Request.UserAgent()
+}

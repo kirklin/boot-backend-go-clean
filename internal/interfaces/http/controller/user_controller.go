@@ -25,7 +25,7 @@ type GetUserInput struct {
 }
 
 type UpdateUserInput struct {
-	ID   int64       `path:"id"`
+	ID   int64 `path:"id"`
 	Body entity.User
 }
 
