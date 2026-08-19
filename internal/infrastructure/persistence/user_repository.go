@@ -44,6 +44,23 @@ func (r *userRepository) FindByID(ctx context.Context, id int64) (*entity.User, 
 	return r.handleQueryResult(&dto, err)
 }
 
+func (r *userRepository) FindByIDs(ctx context.Context, ids []int64) ([]*entity.User, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	var dtos []model.UserDTO
+	if err := dbFromContext(ctx, r.db).Where("id IN ?", ids).Find(&dtos).Error; err != nil {
+		return nil, err
+	}
+
+	users := make([]*entity.User, 0, len(dtos))
+	for i := range dtos {
+		users = append(users, dtos[i].ConvertToEntity())
+	}
+	return users, nil
+}
+
 // FindByUsername retrieves a user by their username
 func (r *userRepository) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
 	var dto model.UserDTO

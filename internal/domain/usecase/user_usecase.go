@@ -12,6 +12,8 @@ type UserUseCase interface {
 	// It takes a user ID and returns the corresponding User entity
 	GetUserByID(ctx context.Context, id int64) (*entity.User, error)
 
+	GetUsersByIDs(ctx context.Context, ids []int64) (map[int64]*entity.User, error)
+
 	// UpdateUser updates the information of an existing user
 	// It takes a User entity with updated information and returns an error if the operation fails
 	UpdateUser(ctx context.Context, user *entity.User) error

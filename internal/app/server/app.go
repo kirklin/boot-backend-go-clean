@@ -167,7 +167,7 @@ func (app *Application) Initialize() error {
 
 	// Layer 3 — Use Cases (depend on interfaces, not concrete types)
 	authUseCase := usecase.NewAuthUseCase(userRepo, authenticator, txManager, loginActivityRepo, app.geoIPResolver, app.Config)
-	userUseCase := usecase.NewUserUseCase(userRepo)
+	userUseCase := usecase.NewUserUseCase(userRepo, app.Cache)
 
 	// Layer 4 — Controllers (depend on use case interfaces)
 	authCtrl := controller.NewAuthController(authUseCase)

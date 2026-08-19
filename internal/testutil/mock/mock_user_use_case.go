@@ -81,6 +81,65 @@ func (_c *MockUserUseCase_GetUserByID_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// GetUsersByIDs provides a mock function with given fields: ctx, ids
+func (_m *MockUserUseCase) GetUsersByIDs(ctx context.Context, ids []int64) (map[int64]*entity.User, error) {
+	ret := _m.Called(ctx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUsersByIDs")
+	}
+
+	var r0 map[int64]*entity.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int64) (map[int64]*entity.User, error)); ok {
+		return rf(ctx, ids)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []int64) map[int64]*entity.User); ok {
+		r0 = rf(ctx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[int64]*entity.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []int64) error); ok {
+		r1 = rf(ctx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserUseCase_GetUsersByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUsersByIDs'
+type MockUserUseCase_GetUsersByIDs_Call struct {
+	*mock.Call
+}
+
+// GetUsersByIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []int64
+func (_e *MockUserUseCase_Expecter) GetUsersByIDs(ctx interface{}, ids interface{}) *MockUserUseCase_GetUsersByIDs_Call {
+	return &MockUserUseCase_GetUsersByIDs_Call{Call: _e.mock.On("GetUsersByIDs", ctx, ids)}
+}
+
+func (_c *MockUserUseCase_GetUsersByIDs_Call) Run(run func(ctx context.Context, ids []int64)) *MockUserUseCase_GetUsersByIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]int64))
+	})
+	return _c
+}
+
+func (_c *MockUserUseCase_GetUsersByIDs_Call) Return(_a0 map[int64]*entity.User, _a1 error) *MockUserUseCase_GetUsersByIDs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserUseCase_GetUsersByIDs_Call) RunAndReturn(run func(context.Context, []int64) (map[int64]*entity.User, error)) *MockUserUseCase_GetUsersByIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SoftDeleteUser provides a mock function with given fields: ctx, id
 func (_m *MockUserUseCase) SoftDeleteUser(ctx context.Context, id int64) error {
 	ret := _m.Called(ctx, id)
