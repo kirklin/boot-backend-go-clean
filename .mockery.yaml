@@ -4,8 +4,8 @@
 # Generate mocks:  make mock
 # Mocks output to:  internal/testutil/mock/
 #
-# When you add a new interface to domain/, add it to the 'interfaces' section
-# below and run `make mock` to regenerate.
+# When you add a new interface to domain/ (or a pkg/ port such as cache.Cache),
+# add it to the 'interfaces' section below and run `make mock` to regenerate.
 
 with-expecter: true
 disable-version-string: true
@@ -30,3 +30,12 @@ packages:
     interfaces:
       AuthUseCase:
       UserUseCase:
+  # Infrastructure ports that live in pkg/. cache.Cache also has a real no-op
+  # implementation (cache.NewNoop) — prefer that when a test just needs the
+  # calls to go somewhere, and the mock when it needs to assert on them.
+  github.com/kirklin/boot-backend-go-clean/pkg/cache:
+    interfaces:
+      Cache:
+  github.com/kirklin/boot-backend-go-clean/pkg/storage:
+    interfaces:
+      Storage:
