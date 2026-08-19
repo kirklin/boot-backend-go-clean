@@ -49,6 +49,28 @@ type AppConfig struct {
 	// Login Activity — IP geolocation and audit logging
 	LoginActivityEnabled       bool `mapstructure:"LOGIN_ACTIVITY_ENABLED"`        // Enable login activity recording, default true
 	LoginActivityRetentionDays int  `mapstructure:"LOGIN_ACTIVITY_RETENTION_DAYS"` // Auto-cleanup records older than N days, default 180 (6 months), 0 = keep forever
+	// Cache (Redis)
+	CacheEnabled               bool    `mapstructure:"CACHE_ENABLED"`
+	RedisAddr                  string  `mapstructure:"REDIS_ADDR"`
+	RedisPassword              string  `mapstructure:"REDIS_PASSWORD"`
+	RedisDB                    int     `mapstructure:"REDIS_DB"`
+	RedisPoolSize              int     `mapstructure:"REDIS_POOL_SIZE"`
+	CacheKeyPrefix             string  `mapstructure:"CACHE_KEY_PREFIX"`
+	CacheTTLJitter             float64 `mapstructure:"CACHE_TTL_JITTER"`
+	CacheNegativeTTLSeconds    int     `mapstructure:"CACHE_NEGATIVE_TTL_SECONDS"`
+	CacheRefreshTimeoutSeconds int     `mapstructure:"CACHE_REFRESH_TIMEOUT_SECONDS"`
+	// Object Storage (S3-compatible)
+	StorageEnabled      bool   `mapstructure:"STORAGE_ENABLED"`
+	MinIOEndpoint       string `mapstructure:"MINIO_ENDPOINT"`
+	MinIOPublicEndpoint string `mapstructure:"MINIO_PUBLIC_ENDPOINT"`
+	MinIOAccessKey      string `mapstructure:"MINIO_ACCESS_KEY"`
+	MinIOSecretKey      string `mapstructure:"MINIO_SECRET_KEY"`
+	MinIOUseSSL         bool   `mapstructure:"MINIO_USE_SSL"`
+	MinIOPublicUseSSL   bool   `mapstructure:"MINIO_PUBLIC_USE_SSL"`
+	MinIORegion         string `mapstructure:"MINIO_REGION"`
+	MinIOBucket         string `mapstructure:"MINIO_BUCKET"`
+	MinIOKeyPrefix      string `mapstructure:"MINIO_KEY_PREFIX"`
+	MinIOEnsureBucket   bool   `mapstructure:"MINIO_ENSURE_BUCKET"`
 }
 
 // ServerAddress returns the formatted server address
@@ -94,6 +116,23 @@ func (c *AppConfig) Validate() error {
 	requireInt(c.AccessTokenLifetime, "ACCESS_TOKEN_LIFETIME_HOURS")
 	requireInt(c.RefreshTokenLifetime, "REFRESH_TOKEN_LIFETIME_HOURS")
 
+	if c.CacheEnabled {
+		requireStr(c.RedisAddr, "REDIS_ADDR")
+		if c.CacheTTLJitter < 0 || c.CacheTTLJitter >= 1 {
+			errs = append(errs, fmt.Errorf("  - CACHE_TTL_JITTER must be in [0, 1), got %v", c.CacheTTLJitter))
+		}
+		if c.CacheNegativeTTLSeconds < 0 {
+			errs = append(errs, fmt.Errorf("  - CACHE_NEGATIVE_TTL_SECONDS must not be negative, got %d", c.CacheNegativeTTLSeconds))
+		}
+	}
+
+	if c.StorageEnabled {
+		requireStr(c.MinIOEndpoint, "MINIO_ENDPOINT")
+		requireStr(c.MinIOAccessKey, "MINIO_ACCESS_KEY")
+		requireStr(c.MinIOSecretKey, "MINIO_SECRET_KEY")
+		requireStr(c.MinIOBucket, "MINIO_BUCKET")
+	}
+
 	if len(errs) > 0 {
 		return fmt.Errorf("configuration validation failed:\n%w", errors.Join(errs...))
 	}
@@ -110,6 +149,9 @@ func LoadConfig() (*AppConfig, error) {
 	// Sensible defaults — can be overridden by .env or env vars
 	viper.SetDefault("LOGIN_ACTIVITY_ENABLED", true)
 	viper.SetDefault("LOGIN_ACTIVITY_RETENTION_DAYS", 180) // 6 months
+	viper.SetDefault("CACHE_TTL_JITTER", 0.1)
+	viper.SetDefault("CACHE_NEGATIVE_TTL_SECONDS", 30)
+	viper.SetDefault("CACHE_REFRESH_TIMEOUT_SECONDS", 10)
 
 	// Ignore error if .env doesn't exist, as we might rely entirely on env vars
 	_ = viper.ReadInConfig()
