@@ -9,22 +9,26 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/gateway"
 	"github.com/kirklin/boot-backend-go-clean/internal/domain/repository"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/ai"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/auth"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/geoip"
+	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/metrics"
 	"github.com/kirklin/boot-backend-go-clean/internal/infrastructure/persistence"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/controller"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/middleware"
 	"github.com/kirklin/boot-backend-go-clean/internal/interfaces/http/route"
 	"github.com/kirklin/boot-backend-go-clean/internal/usecase"
+	"github.com/kirklin/boot-backend-go-clean/pkg/cache"
 	"github.com/kirklin/boot-backend-go-clean/pkg/configs"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/mysql"
 	"github.com/kirklin/boot-backend-go-clean/pkg/database/postgres"
 	"github.com/kirklin/boot-backend-go-clean/pkg/logger"
+	"github.com/kirklin/boot-backend-go-clean/pkg/storage"
 	snowflakeutils "github.com/kirklin/boot-backend-go-clean/pkg/utils/snowflake"
 )
 
@@ -33,6 +37,8 @@ type Application struct {
 	Config        *configs.AppConfig
 	Router        *gin.Engine
 	DB            database.Database
+	Cache         cache.Cache
+	Storage       storage.Storage
 	httpServer    *http.Server
 	geoIPResolver gateway.GeoIPResolver // optional – initialised when GeoIP data files are available
 	aiProvider    *ai.Provider          // optional – initialised when AI_ENABLED=true
@@ -128,6 +134,13 @@ func (app *Application) Initialize() error {
 	// the route layer receives interfaces and pre-built controllers.
 
 	// Layer 1 — Infrastructure (depends on config/db)
+	if err := app.initCache(); err != nil {
+		return err
+	}
+	if err := app.initStorage(context.Background()); err != nil {
+		return err
+	}
+
 	tokenBlacklist := auth.NewTokenBlacklist()
 	authenticator := auth.NewJWTAuthenticator(
 		app.Config.AccessTokenSecret,
@@ -159,7 +172,7 @@ func (app *Application) Initialize() error {
 	// Layer 4 — Controllers (depend on use case interfaces)
 	authCtrl := controller.NewAuthController(authUseCase)
 	userCtrl := controller.NewUserController(userUseCase)
-	infraCtrl := controller.NewInfraController(app.DB, app.Config)
+	infraCtrl := controller.NewInfraController(app.DB, app.Cache, app.Storage, app.Config)
 
 	// Set up routes — Router holds shared deps, each register method receives its own controller
 	router := route.NewRouter(authenticator, app.Config)
@@ -195,11 +208,77 @@ func (app *Application) Initialize() error {
 			app.Config.AIModel, app.Config.LangfuseEnabled)
 	}
 
+	if err := prometheus.Register(metrics.NewCacheCollector(app.Cache)); err != nil {
+		var already prometheus.AlreadyRegisteredError
+		if !errors.As(err, &already) {
+			return fmt.Errorf("failed to register cache metrics: %w", err)
+		}
+	}
+
 	// ── Login Activity Cleanup (optional) ───────────────────────────────
 	if app.Config.LoginActivityEnabled && app.Config.LoginActivityRetentionDays > 0 {
 		app.startLoginActivityCleanup(loginActivityRepo)
 	}
 
+	return nil
+}
+
+func (app *Application) initCache() error {
+	if !app.Config.CacheEnabled {
+		app.Cache = cache.NewNoop()
+		logger.GetLogger().Info("Cache disabled (using no-op cache)")
+		return nil
+	}
+
+	client, err := cache.NewRedis(cache.Config{
+		Addr:           app.Config.RedisAddr,
+		Password:       app.Config.RedisPassword,
+		DB:             app.Config.RedisDB,
+		PoolSize:       app.Config.RedisPoolSize,
+		KeyPrefix:      app.Config.CacheKeyPrefix,
+		TTLJitter:      app.Config.CacheTTLJitter,
+		NegativeTTL:    time.Duration(app.Config.CacheNegativeTTLSeconds) * time.Second,
+		RefreshTimeout: time.Duration(app.Config.CacheRefreshTimeoutSeconds) * time.Second,
+
+		OnError: func(key string, err error) {
+			logger.GetLogger().Warnf("Cache: %v (key=%s)", err, key)
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to init cache: %w", err)
+	}
+
+	app.Cache = client
+	logger.GetLogger().Infof("Cache initialized (redis=%s, db=%d, jitter=%v, negative_ttl=%ds)",
+		app.Config.RedisAddr, app.Config.RedisDB, app.Config.CacheTTLJitter, app.Config.CacheNegativeTTLSeconds)
+	return nil
+}
+
+func (app *Application) initStorage(ctx context.Context) error {
+	if !app.Config.StorageEnabled {
+		logger.GetLogger().Info("Object storage disabled")
+		return nil
+	}
+
+	store, err := storage.NewMinIO(ctx, storage.Config{
+		Endpoint:       app.Config.MinIOEndpoint,
+		PublicEndpoint: app.Config.MinIOPublicEndpoint,
+		UseSSL:         app.Config.MinIOUseSSL,
+		PublicUseSSL:   app.Config.MinIOPublicUseSSL,
+		AccessKey:      app.Config.MinIOAccessKey,
+		SecretKey:      app.Config.MinIOSecretKey,
+		Region:         app.Config.MinIORegion,
+		Bucket:         app.Config.MinIOBucket,
+		KeyPrefix:      app.Config.MinIOKeyPrefix,
+		EnsureBucket:   app.Config.MinIOEnsureBucket,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to init object storage: %w", err)
+	}
+
+	app.Storage = store
+	logger.GetLogger().Infof("Object storage initialized (endpoint=%s, bucket=%s)",
+		app.Config.MinIOEndpoint, app.Config.MinIOBucket)
 	return nil
 }
 
@@ -309,6 +388,15 @@ func (app *Application) shutdown() {
 			log.Errorf("Error closing AI provider: %v", err)
 		} else {
 			log.Info("AI provider closed")
+		}
+	}
+
+	if app.Cache != nil {
+		log.Info("Closing cache...")
+		if err := app.Cache.Close(); err != nil {
+			log.Errorf("Error closing cache: %v", err)
+		} else {
+			log.Info("Cache closed")
 		}
 	}
 
